@@ -9057,6 +9057,51 @@ function loadSupabaseConfigUI() {
 
 (async () => { await init(); })();
 </script>
-</body>
+<script>
+// PATCH: Sincronización bidireccional con Supabase
+window.syncStudentsFromSupabase = async function() {
+  if (!window._sb) { return; }
+  try {
+    var r = await window._sb.from('alumnos').select('*');
+    if (r.error) throw r.error;
+    var fromCloud = (r.data||[]).map(function(d){return{name:d.nombre,code:d.codigo,examId:d.examen_id||'default',disabled:d.disabled||false};});
+    var local = window.getStudents ? window.getStudents() : [];
+    var merged = local.slice();
+    var added = 0;
+    fromCloud.forEach(function(cs){
+      var idx = merged.findIndex(function(ls){return ls.code===cs.code;});
+      if(idx>=0){merged[idx].disabled=cs.disabled;}
+      else{merged.push(cs);added++;}
+    });
+    if(window.setStudents) window.setStudents(merged);
+    if(added>0 && window.showToast) window.showToast('\u2601\uFE0F '+added+' nuevos alumnos de Supabase','success',4000);
+    else if(window.showToast) window.showToast('\u2705 Alumnos sincronizados ('+fromCloud.length+')','success',3000);
+  } catch(e) { console.warn('syncStudents error:',e.message); }
+};
+
+// Auto-sync al entrar al admin
+var _origShowAdmin = window.showAdmin;
+window.showAdmin = function(){
+  if(_origShowAdmin) _origShowAdmin.apply(this, arguments);
+  setTimeout(function(){
+    if(window._sb){
+      window.syncStudentsFromSupabase();
+      if(window.syncFromSupabase) window.syncFromSupabase();
+    }
+  }, 800);
+};
+
+// Sync baja/alta de alumno con Supabase
+var _origToggle = window.toggleStudentDisabled;
+window.toggleStudentDisabled = function(code){
+  if(_origToggle) _origToggle.apply(this, arguments);
+  if(window._sb){
+    var list = window.getStudents ? window.getStudents() : [];
+    var s = list.find(function(x){return x.code===code;});
+    if(s) window._sb.from('alumnos').update({disabled:!!s.disabled}).eq('codigo',code).then(function(){});
+  }
+};
+</script></body>
 </html>
+
 
