@@ -9075,5 +9075,33 @@ window.addEventListener('load',function(){
 });
 })();
 </script>
-</body>
+<script>
+window.addEventListener("load", function(){
+  var SU="https://ycjtoorijworrcpuetff.supabase.co",SK="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InljanRvb3JpandvcnJjcHVldGZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0NTU5MTAsImV4cCI6MjA5NDAzMTkxMH0.ZWQUYkuiW8QKYdqVgEqDL18iwfsyYAx1HtcDryT5wTM";
+  function gS2(){try{return window.supabase.createClient(SU,SK,{auth:{persistSession:false}});}catch(e){return null;}}
+  window.syncStudentToSupabase = async function(student){
+    var s=gS2(); if(!s) return;
+    try{
+      var exams=window.getExams?window.getExams():{};
+      var et=exams[student.examId]?exams[student.examId].title:"";
+      await s.from("alumnos").upsert({
+        nombre:student.name, codigo:student.code,
+        examen_id:student.examId||null, examen_titulo:et,
+        disabled:!!student.disabled
+      },{onConflict:"codigo"});
+    }catch(e){console.warn("syncStudent:",e.message);}
+  };
+  var origAdd=window.addStudent;
+  if(origAdd&&!origAdd._p){
+    window.addStudent=function(){
+      origAdd.apply(this,arguments);
+      var list=window.getStudents?window.getStudents():[];
+      var last=list[list.length-1];
+      if(last) window.syncStudentToSupabase(last);
+    };
+    window.addStudent._p=true;
+  }
+});
+</script></body>
 </html>
+
