@@ -9189,8 +9189,9 @@ window.addEventListener("load", function(){
     window.deleteExam._ep2=true;
   }
 });
-</script></body>
+</script><script>window.syncExamsFromSupabase=async function(){var SU="https://ycjtoorijworrcpuetff.supabase.co",SK="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InljanRvb3JpandvcnJjcHVldGZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0NTU5MTAsImV4cCI6MjA5NDAzMTkxMH0.ZWQUYkuiW8QKYdqVgEqDL18iwfsyYAx1HtcDryT5wTM";var s;try{s=window.supabase.createClient(SU,SK,{auth:{persistSession:false}});}catch(e){return;}var r=await s.from("examenes").select("*");if(r.error||!r.data||!r.data.length)return;var e=window.getExams?window.getExams():{};r.data.forEach(function(x){if(x.contenido)e[x.exam_id]=x.contenido;});if(window.saveStore)window.saveStore("exam_exams_v1",e);setTimeout(function(){if(window.renderExamList)window.renderExamList();else if(window.renderExams)window.renderExams();else location.reload();},500);};</script></body>
 </html>
+
 
 
 
