@@ -9166,8 +9166,99 @@ window.toggleStudentDisabled = function(code){
   if(document.readyState==='complete'){patchShowAdmin();}
   else{window.addEventListener('load',patchShowAdmin);}
 })();
+</script><script>
+(function(){
+  var SB_URL='https://ycjtoorijworrcpuetff.supabase.co';
+  var SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InljanRvb3JpandvcnJjcHVldGZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0NTU5MTAsImV4cCI6MjA5NDAzMTkxMH0.ZWQUYkuiW8QKYdqVgEqDL18iwfsyYAx1HtcDryT5wTM';
+  var pc=null;
+  function getSb(){if(pc)return pc;try{pc=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:false}});}catch(e){}return pc;}
+
+  /* Traer alumnos de Supabase */
+  window.syncStudentsFromSupabase=async function(){
+    var sb=getSb();if(!sb)return;
+    try{
+      var r=await sb.from('alumnos').select('*');if(r.error)throw r.error;
+      var cloud=(r.data||[]).map(function(d){return{name:d.nombre,code:d.codigo,examId:d.examen_id||'default',disabled:!!d.disabled};});
+      var local=window.getStudents?window.getStudents():[];
+      var merged=local.slice();var added=0;
+      cloud.forEach(function(cs){
+        var i=merged.findIndex(function(x){return x.code===cs.code;});
+        if(i>=0){merged[i].disabled=cs.disabled;}else{merged.push(cs);added++;}
+      });
+      if(window.setStudents)window.setStudents(merged);
+      if(window.showToast)window.showToast('Alumnos sincronizados ('+cloud.length+')'+(added>0?', '+added+' nuevos':''),'success',3000);
+    }catch(e){if(window.showToast)window.showToast('Error sync alumnos: '+e.message,'error',4000);}
+  };
+
+  /* Traer resultados de Supabase */
+  window.syncResultsFromSupabase=async function(){
+    var sb=getSb();if(!sb)return;
+    try{
+      var r=await sb.from('resultados').select('*').order('creado_en',{ascending:false});if(r.error)throw r.error;
+      var cloud=(r.data||[]).map(function(d){return{student:d.alumno,studentCode:d.codigo,examId:d.examen_id,examTitle:d.examen_titulo,startedAt:d.inicio,finishedAt:d.fin,reason:d.razon,answers:d.respuestas,alerts:d.alertas||[],games:d.juegos||{},bonusEarned:d.bonus_ganado||0,scoreMC:d.puntos_mc||0,maxMC:d.max_mc||0,scoreTotal:d.total||0,feedback:d.retroalimentacion,_supabaseId:d.id};});
+      var RKEY='exam_results_v1';
+      var local=window.loadStore?window.loadStore(RKEY,[]):[];
+      var merged=local.slice();var added=0;
+      cloud.forEach(function(cr){var exists=local.some(function(lr){return lr.studentCode===cr.studentCode&&lr.finishedAt===cr.finishedAt;});if(!exists){merged.push(cr);added++;}});
+      if(window.saveStore)window.saveStore(RKEY,merged);
+      if(window.renderResults)window.renderResults();
+      if(window.showToast)window.showToast('Resultados sincronizados ('+cloud.length+')'+(added>0?', '+added+' nuevos':''),'success',3000);
+    }catch(e){if(window.showToast)window.showToast('Error sync resultados: '+e.message,'error',4000);}
+  };
+
+  /* Dar de baja / alta un alumno y sincronizar con Supabase */
+  window.toggleStudentDisabledCloud=async function(code,disabled,reason){
+    var sb=getSb();if(!sb)return;
+    try{await sb.from('alumnos').update({disabled:disabled}).eq('codigo',code);}catch(e){console.warn('toggle cloud:',e);}
+  };
+
+  /* Eliminar alumno de Supabase */
+  window.removeStudentCloud=async function(code){
+    var sb=getSb();if(!sb)return;
+    try{await sb.from('alumnos').delete().eq('codigo',code);}catch(e){console.warn('delete cloud:',e);}
+  };
+
+  function patchFunctions(){
+    /* Parchar toggleStudentDisabled */
+    var origToggle=window.toggleStudentDisabled;
+    if(origToggle&&!origToggle._cp){
+      window.toggleStudentDisabled=function(code){
+        origToggle.apply(this,arguments);
+        var list=window.getStudents?window.getStudents():[];
+        var s=list.find(function(x){return x.code===code;});
+        if(s)window.toggleStudentDisabledCloud(code,!!s.disabled,s.disabledReason||'');
+      };
+      window.toggleStudentDisabled._cp=true;
+    }
+    /* Parchar removeStudent */
+    var origRemove=window.removeStudent;
+    if(origRemove&&!origRemove._cp){
+      window.removeStudent=function(code){
+        origRemove.apply(this,arguments);
+        window.removeStudentCloud(code);
+      };
+      window.removeStudent._cp=true;
+    }
+    /* Parchar showAdmin para auto-sync */
+    var origAdmin=window.showAdmin;
+    if(origAdmin&&!origAdmin._cp){
+      window.showAdmin=function(){
+        origAdmin.apply(this,arguments);
+        setTimeout(function(){
+          window.syncStudentsFromSupabase();
+          window.syncResultsFromSupabase();
+        },1000);
+      };
+      window.showAdmin._cp=true;
+    }
+  }
+
+  if(document.readyState==='complete'){patchFunctions();}
+  else{window.addEventListener('load',patchFunctions);}
+})();
 </script></body>
 </html>
+
 
 
 
