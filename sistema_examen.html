@@ -1,6 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
-<head>
+<html lang="es"><head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AcadGuard · Plataforma de Evaluación Académica Anti-IA</title>
@@ -676,17 +675,17 @@
 <body>
 
 <!-- PANTALLA DE CARGA (IndexedDB) -->
-<div id="appLoader" role="status" aria-label="Iniciando AcadGuard">
+<div id="appLoader" role="status" aria-label="Iniciando AcadGuard" class="hidden">
   <div class="spinner" aria-hidden="true"></div>
   <div class="brand">🛡️ AcadGuard</div>
   <div class="sub">Iniciando almacenamiento seguro…</div>
 </div>
 
 <!-- CONTENEDOR DE TOASTS -->
-<div id="toastContainer" aria-live="polite" aria-atomic="false"></div>
+<div id="toastContainer" aria-live="polite" aria-atomic="false"><div class="toast-item success" role="alert" style="--dur: 2.8s;"><span class="t-icon" aria-hidden="true">✅</span><span>Supabase conectado correctamente</span></div><div class="toast-item info" role="alert" style="--dur: 4s;"><span class="t-icon" aria-hidden="true">ℹ️</span><span>Preparando archivo…</span></div></div>
 
 <!-- ================= LOGIN ================= -->
-<div id="screenLogin" class="container">
+<div id="screenLogin" class="container hidden">
   <div class="card" style="max-width: 480px; margin: 60px auto;">
     <div class="center" style="margin-bottom: 8px">
       <div style="display:inline-flex;align-items:center;gap:10px;background:linear-gradient(135deg,#1f4e79,#2e75b6);color:white;padding:10px 18px;border-radius:10px;font-weight:800;font-size:20px;letter-spacing:.5px;box-shadow:0 2px 8px rgba(31,78,121,.25)">
@@ -699,12 +698,12 @@
 
     <!-- Tabs -->
     <div style="display:flex;gap:8px;margin:16px 0;border-bottom:1px solid var(--border)">
-      <button id="tabStudent" class="login-tab active" onclick="switchLoginTab('student')">👨‍🎓 Soy alumno</button>
-      <button id="tabAdmin" class="login-tab" onclick="switchLoginTab('admin')">⚙️ Soy administrador</button>
+      <button id="tabStudent" class="login-tab" onclick="switchLoginTab('student')">👨‍🎓 Soy alumno</button>
+      <button id="tabAdmin" class="login-tab active" onclick="switchLoginTab('admin')">⚙️ Soy administrador</button>
     </div>
 
     <!-- Student form: just code -->
-    <div id="studentLogin">
+    <div id="studentLogin" class="hidden">
       <label>Código de alumno</label>
       <input id="loginCode" type="text" placeholder="Ej. ABC123" autocomplete="off" onkeydown="if(event.key==='Enter')loginStudent()">
       <p class="muted" style="margin-top:8px">Pide tu código al docente. No necesitas contraseña.</p>
@@ -714,7 +713,7 @@
     </div>
 
     <!-- Admin form: user + password -->
-    <div id="adminLogin" class="hidden">
+    <div id="adminLogin" class="">
       <label>Usuario</label>
       <input id="loginUser" type="text" placeholder="admin" autocomplete="off">
       <label>Contraseña</label>
@@ -785,7 +784,7 @@
 
     <div style="display:flex;justify-content:space-between;gap:10px">
       <button class="btn btn-ghost" onclick="logout()">Cancelar</button>
-      <button id="warnStartBtn" class="btn btn-primary" onclick="startExamFromWarning()" disabled>🚀 Comenzar examen</button>
+      <button id="warnStartBtn" class="btn btn-primary" onclick="startExamFromWarning()" disabled="">🚀 Comenzar examen</button>
     </div>
   </div>
   <p style="text-align:center;color:#7a8290;font-size:11px;margin:14px 0 8px">
@@ -794,12 +793,12 @@
 </div>
 
 <!-- ================= ADMIN PANEL ================= -->
-<div id="screenAdmin" class="hidden">
+<div id="screenAdmin" class="">
   <div class="topbar">
     <div class="brand">🛡️ AcadGuard · Panel del Administrador</div>
     <div class="right">
-      <span id="supabaseTopBadge" title="Estado de Supabase" style="font-size:11px;padding:3px 10px;border-radius:999px;background:rgba(255,255,255,.15);color:rgba(255,255,255,.8);cursor:pointer" onclick="switchAdminTab('config')">⚫ Supabase</span>
-      <span class="badge" id="adminUserBadge"></span>
+      <span id="supabaseTopBadge" title="Estado de Supabase" style="font-size: 11px; padding: 3px 10px; border-radius: 999px; background: rgba(52, 211, 153, 0.3); color: rgba(255, 255, 255, 0.95); cursor: pointer;" onclick="switchAdminTab('config')">🟢 Supabase conectado</span>
+      <span class="badge" id="adminUserBadge">👤 admin</span>
       <button class="btn btn-ghost btn-sm" onclick="logout()" style="color:white;border-color:rgba(255,255,255,.5)">Salir</button>
     </div>
   </div>
@@ -808,8 +807,8 @@
     <!-- Pestañas de navegación -->
     <div class="admin-tabs" id="adminTabs">
       <button class="admin-tab active" data-tab="config" onclick="switchAdminTab('config')">⚙️ Configuración</button>
-      <button class="admin-tab" data-tab="exams" onclick="switchAdminTab('exams')">📚 Exámenes <span class="badge-count" id="tabBadgeExams">0</span></button>
-      <button class="admin-tab" data-tab="games" onclick="switchAdminTab('games')">🎮 Juegos & Trivias</button>
+      <button class="admin-tab" data-tab="exams" onclick="switchAdminTab('exams')">📚 Exámenes <span class="badge-count" id="tabBadgeExams">2</span></button>
+      <button class="admin-tab" data-tab="games" onclick="switchAdminTab('games')">🎮 Juegos &amp; Trivias</button>
       <button class="admin-tab" data-tab="students" onclick="switchAdminTab('students')">👥 Alumnos <span class="badge-count" id="tabBadgeStudents">0</span></button>
       <button class="admin-tab" data-tab="results" onclick="switchAdminTab('results')">📊 Resultados <span class="badge-count" id="tabBadgeResults">0</span></button>
       <button class="admin-tab" data-tab="analytics" onclick="switchAdminTab('analytics')">📈 Analítica</button>
@@ -900,7 +899,7 @@
     <div class="card" style="border-top:4px solid #3ecf8e">
       <h2 style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
         <span>🌐 Supabase — Sincronización en la nube</span>
-        <span id="supabaseBadge" style="font-size:12px;padding:3px 12px;border-radius:999px;font-weight:700;background:#e8f5e9;color:#1e7e34">⚙️ Sin configurar</span>
+        <span id="supabaseBadge" style="font-size: 12px; padding: 3px 12px; border-radius: 999px; font-weight: 700; background: rgb(209, 250, 229); color: rgb(6, 95, 70);">🟢 Supabase conectado</span>
       </h2>
       <p class="muted">Con Supabase los resultados de los 50 alumnos llegan automáticamente a tu base de datos en la nube. Cada vez que un alumno entrega el examen, su resultado se sube en segundos aunque estén en distintas computadoras.</p>
 
@@ -960,7 +959,11 @@ CREATE POLICY "docente_select" ON resultados FOR SELECT TO anon USING (true);</d
         <button class="btn btn-ghost" onclick="syncFromSupabase()" style="color:#2e75b6;border-color:#2e75b6">🔄 Traer resultados de la nube</button>
         <button class="btn btn-ghost" onclick="pushAllResultsToSupabase()" title="Sube al servidor todos los resultados guardados localmente">⬆️ Subir locales a la nube</button>
       </div>
-      <div id="supabaseStatus" style="margin-top:10px;font-size:13px"></div>
+      <div style="margin-top:10px">
+        <button class="btn btn-primary" onclick="exportWithSupabase()" style="background:#1f4e79;border-color:#1f4e79;width:100%" title="Genera un archivo HTML con Supabase ya integrado para subir a GitHub">📦 Generar archivo para GitHub (con Supabase integrado)</button>
+        <p class="muted" style="font-size:12px;margin-top:6px">Este botón genera un <code>sistema_examen.html</code> con tus credenciales ya integradas. Súbelo a GitHub y todos los alumnos se conectarán automáticamente sin configurar nada.</p>
+      </div>
+      <div id="supabaseStatus" style="margin-top:10px;font-size:13px"><span style="color:#1e7e34;font-weight:700">✅ Conexión exitosa. La plataforma está lista para recibir resultados de tus alumnos.</span></div>
     </div>
 
     </div> <!-- /admin-tab-content config -->
@@ -969,11 +972,359 @@ CREATE POLICY "docente_select" ON resultados FOR SELECT TO anon USING (true);</d
     <div class="admin-tab-content" data-tab-content="games">
     <div class="card">
       <h2 style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
-        <span>🎮 Juegos & Trivias</span>
-        <select id="gamesPanelExamSel" onchange="renderGamesPanel()" style="font-size:13px;padding:6px 10px"></select>
+        <span>🎮 Juegos &amp; Trivias</span>
+        <select id="gamesPanelExamSel" onchange="renderGamesPanel()" style="font-size:13px;padding:6px 10px"><option value="default">Examen Final · Financiamiento Empresarial</option><option value="admin_fin">Examen · Administración Financiera</option></select>
       </h2>
       <p class="muted">Configura qué bonus aparece en cada sección, cuántos puntos vale, y edita el contenido (preguntas de trivia, palabras del crucigrama, etc.).</p>
-      <div id="gamesPanel"></div>
+      <div id="gamesPanel"><div style="background:white;border:2px solid #ffc107;border-radius:10px;padding:14px 16px;margin-bottom:14px;">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+        <span style="background:#1f4e79;color:white;padding:4px 10px;border-radius:6px;font-size:13px;font-weight:700">I</span>
+        <span style="font-weight:700;font-size:14px;flex:1">Función de la banca (activo y pasivo)</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#f4f6fa;padding:8px 12px;border-radius:6px">
+        <label style="margin:0;font-weight:600;font-size:13px">🎮 Bonus:</label>
+        <select onchange="gpSetBonusType('default', 0, this.value)" style="font-size:13px;padding:5px 8px;flex:1;min-width:200px">
+          <option value="_default">🎲 Por defecto (rotación)</option>
+          <option value="none">🚫 Deshabilitado (sin bonus)</option>
+          <option value="pong">🏓 Pong</option>
+          <option value="memory">💰 Memoria Financiera</option>
+          <option value="whack">🔨 Caza-Topos</option>
+          <option value="guitar">🎸 Ritmo Financiero (Guitar Hero)</option>
+          <option value="puzzle">🧩 Rompecabezas deslizante</option>
+          <option value="trivia">❓ Trivia (editable)</option>
+          <option value="crossword" selected="">📝 Crucigrama (editable)</option>
+          <option value="wordsearch">🔤 Sopa de letras (editable)</option>
+        </select>
+        <label style="margin:0;font-weight:600;font-size:13px">🏅 Puntos:</label>
+          <input type="number" min="0" max="20" value="2" onchange="gpSetBonusPoints('default', 0, this.value)" style="width:70px;font-size:13px;padding:5px 8px">
+      </div><div style="margin-top:10px;padding-top:10px;border-top:1px solid #f0d986">
+    <p style="font-size:12px;color:#7a5300;margin:0 0 8px">📝 Crucigrama: agrega palabras + pista. El sistema generará una cuadrícula con cruces. La palabra más larga va horizontal y las demás se cruzan con ella.</p><div style="background:white;border:1px solid #d8dfe9;padding:8px 10px;border-radius:6px;margin-bottom:6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <span style="background:#7a5300;color:white;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:700">1</span>
+      <input type="text" value="ACTIVO" placeholder="PALABRA (sin acentos, mayúsculas)" style="flex:1;min-width:140px;font-size:13px;text-transform:uppercase" onchange="gpEditCwAnswer('default', 0, 0, this.value)">
+      <input type="text" value="Recursos económicos del banco (créditos otorgados, inversiones)" placeholder="Pista o definición" style="flex:2;min-width:220px;font-size:13px" onchange="gpEditCwClue('default', 0, 0, this.value)">
+      <button class="btn btn-sm btn-ghost" onclick="gpDeleteCwClue('default', 0, 0)" style="color:var(--accent);border-color:var(--accent)" title="Eliminar">🗑️</button>
+    </div><div style="background:white;border:1px solid #d8dfe9;padding:8px 10px;border-radius:6px;margin-bottom:6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <span style="background:#7a5300;color:white;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:700">2</span>
+      <input type="text" value="PASIVO" placeholder="PALABRA (sin acentos, mayúsculas)" style="flex:1;min-width:140px;font-size:13px;text-transform:uppercase" onchange="gpEditCwAnswer('default', 0, 1, this.value)">
+      <input type="text" value="Obligaciones del banco frente a sus clientes (depósitos)" placeholder="Pista o definición" style="flex:2;min-width:220px;font-size:13px" onchange="gpEditCwClue('default', 0, 1, this.value)">
+      <button class="btn btn-sm btn-ghost" onclick="gpDeleteCwClue('default', 0, 1)" style="color:var(--accent);border-color:var(--accent)" title="Eliminar">🗑️</button>
+    </div><div style="background:white;border:1px solid #d8dfe9;padding:8px 10px;border-radius:6px;margin-bottom:6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <span style="background:#7a5300;color:white;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:700">3</span>
+      <input type="text" value="DEPOSITO" placeholder="PALABRA (sin acentos, mayúsculas)" style="flex:1;min-width:140px;font-size:13px;text-transform:uppercase" onchange="gpEditCwAnswer('default', 0, 2, this.value)">
+      <input type="text" value="Dinero que un cliente entrega al banco para custodia" placeholder="Pista o definición" style="flex:2;min-width:220px;font-size:13px" onchange="gpEditCwClue('default', 0, 2, this.value)">
+      <button class="btn btn-sm btn-ghost" onclick="gpDeleteCwClue('default', 0, 2)" style="color:var(--accent);border-color:var(--accent)" title="Eliminar">🗑️</button>
+    </div><div style="background:white;border:1px solid #d8dfe9;padding:8px 10px;border-radius:6px;margin-bottom:6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <span style="background:#7a5300;color:white;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:700">4</span>
+      <input type="text" value="INTERES" placeholder="PALABRA (sin acentos, mayúsculas)" style="flex:1;min-width:140px;font-size:13px;text-transform:uppercase" onchange="gpEditCwAnswer('default', 0, 3, this.value)">
+      <input type="text" value="Costo del dinero prestado o rendimiento del invertido" placeholder="Pista o definición" style="flex:2;min-width:220px;font-size:13px" onchange="gpEditCwClue('default', 0, 3, this.value)">
+      <button class="btn btn-sm btn-ghost" onclick="gpDeleteCwClue('default', 0, 3)" style="color:var(--accent);border-color:var(--accent)" title="Eliminar">🗑️</button>
+    </div><div style="background:white;border:1px solid #d8dfe9;padding:8px 10px;border-radius:6px;margin-bottom:6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <span style="background:#7a5300;color:white;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:700">5</span>
+      <input type="text" value="CREDITO" placeholder="PALABRA (sin acentos, mayúsculas)" style="flex:1;min-width:140px;font-size:13px;text-transform:uppercase" onchange="gpEditCwAnswer('default', 0, 4, this.value)">
+      <input type="text" value="Préstamo que el banco concede a un cliente" placeholder="Pista o definición" style="flex:2;min-width:220px;font-size:13px" onchange="gpEditCwClue('default', 0, 4, this.value)">
+      <button class="btn btn-sm btn-ghost" onclick="gpDeleteCwClue('default', 0, 4)" style="color:var(--accent);border-color:var(--accent)" title="Eliminar">🗑️</button>
+    </div><div style="background:white;border:1px solid #d8dfe9;padding:8px 10px;border-radius:6px;margin-bottom:6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <span style="background:#7a5300;color:white;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:700">6</span>
+      <input type="text" value="FONDEO" placeholder="PALABRA (sin acentos, mayúsculas)" style="flex:1;min-width:140px;font-size:13px;text-transform:uppercase" onchange="gpEditCwAnswer('default', 0, 5, this.value)">
+      <input type="text" value="Recursos con los que el banco financia su operación" placeholder="Pista o definición" style="flex:2;min-width:220px;font-size:13px" onchange="gpEditCwClue('default', 0, 5, this.value)">
+      <button class="btn btn-sm btn-ghost" onclick="gpDeleteCwClue('default', 0, 5)" style="color:var(--accent);border-color:var(--accent)" title="Eliminar">🗑️</button>
+    </div><button class="btn btn-sm btn-primary" onclick="gpAddCwClue('default', 0)">➕ Agregar palabra</button>
+    <p class="muted" style="font-size:11px;margin-top:6px">El alumno debe completar al menos el 70% de las palabras para ganar.</p>
+  </div></div><div style="background:white;border:2px solid #ffc107;border-radius:10px;padding:14px 16px;margin-bottom:14px;">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+        <span style="background:#1f4e79;color:white;padding:4px 10px;border-radius:6px;font-size:13px;font-weight:700">II</span>
+        <span style="font-weight:700;font-size:14px;flex:1">Tipos de crédito</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#f4f6fa;padding:8px 12px;border-radius:6px">
+        <label style="margin:0;font-weight:600;font-size:13px">🎮 Bonus:</label>
+        <select onchange="gpSetBonusType('default', 1, this.value)" style="font-size:13px;padding:5px 8px;flex:1;min-width:200px">
+          <option value="_default" selected="">🎲 Por defecto (rotación)</option>
+          <option value="none">🚫 Deshabilitado (sin bonus)</option>
+          <option value="pong">🏓 Pong</option>
+          <option value="memory">💰 Memoria Financiera</option>
+          <option value="whack">🔨 Caza-Topos</option>
+          <option value="guitar">🎸 Ritmo Financiero (Guitar Hero)</option>
+          <option value="puzzle">🧩 Rompecabezas deslizante</option>
+          <option value="trivia">❓ Trivia (editable)</option>
+          <option value="crossword">📝 Crucigrama (editable)</option>
+          <option value="wordsearch">🔤 Sopa de letras (editable)</option>
+        </select>
+        <label style="margin:0;font-weight:600;font-size:13px">🏅 Puntos:</label>
+          <input type="number" min="0" max="20" value="1" onchange="gpSetBonusPoints('default', 1, this.value)" style="width:70px;font-size:13px;padding:5px 8px">
+      </div><p style="font-size:12px;color:#5b6470;margin:8px 0 0">Por defecto en esta sección: 💰 <b>Memoria Financiera</b></p></div><div style="background:white;border:2px solid #ffc107;border-radius:10px;padding:14px 16px;margin-bottom:14px;">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+        <span style="background:#1f4e79;color:white;padding:4px 10px;border-radius:6px;font-size:13px;font-weight:700">III</span>
+        <span style="font-weight:700;font-size:14px;flex:1">Banca múltiple vs. banca de desarrollo</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#f4f6fa;padding:8px 12px;border-radius:6px">
+        <label style="margin:0;font-weight:600;font-size:13px">🎮 Bonus:</label>
+        <select onchange="gpSetBonusType('default', 2, this.value)" style="font-size:13px;padding:5px 8px;flex:1;min-width:200px">
+          <option value="_default" selected="">🎲 Por defecto (rotación)</option>
+          <option value="none">🚫 Deshabilitado (sin bonus)</option>
+          <option value="pong">🏓 Pong</option>
+          <option value="memory">💰 Memoria Financiera</option>
+          <option value="whack">🔨 Caza-Topos</option>
+          <option value="guitar">🎸 Ritmo Financiero (Guitar Hero)</option>
+          <option value="puzzle">🧩 Rompecabezas deslizante</option>
+          <option value="trivia">❓ Trivia (editable)</option>
+          <option value="crossword">📝 Crucigrama (editable)</option>
+          <option value="wordsearch">🔤 Sopa de letras (editable)</option>
+        </select>
+        <label style="margin:0;font-weight:600;font-size:13px">🏅 Puntos:</label>
+          <input type="number" min="0" max="20" value="1" onchange="gpSetBonusPoints('default', 2, this.value)" style="width:70px;font-size:13px;padding:5px 8px">
+      </div><p style="font-size:12px;color:#5b6470;margin:8px 0 0">Por defecto en esta sección: 🔨 <b>Caza-Topos</b></p></div><div style="background:white;border:2px solid #ffc107;border-radius:10px;padding:14px 16px;margin-bottom:14px;">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+        <span style="background:#1f4e79;color:white;padding:4px 10px;border-radius:6px;font-size:13px;font-weight:700">IV</span>
+        <span style="font-weight:700;font-size:14px;flex:1">Mercado de dinero</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#f4f6fa;padding:8px 12px;border-radius:6px">
+        <label style="margin:0;font-weight:600;font-size:13px">🎮 Bonus:</label>
+        <select onchange="gpSetBonusType('default', 3, this.value)" style="font-size:13px;padding:5px 8px;flex:1;min-width:200px">
+          <option value="_default">🎲 Por defecto (rotación)</option>
+          <option value="none">🚫 Deshabilitado (sin bonus)</option>
+          <option value="pong">🏓 Pong</option>
+          <option value="memory">💰 Memoria Financiera</option>
+          <option value="whack">🔨 Caza-Topos</option>
+          <option value="guitar">🎸 Ritmo Financiero (Guitar Hero)</option>
+          <option value="puzzle">🧩 Rompecabezas deslizante</option>
+          <option value="trivia">❓ Trivia (editable)</option>
+          <option value="crossword">📝 Crucigrama (editable)</option>
+          <option value="wordsearch" selected="">🔤 Sopa de letras (editable)</option>
+        </select>
+        <label style="margin:0;font-weight:600;font-size:13px">🏅 Puntos:</label>
+          <input type="number" min="0" max="20" value="2" onchange="gpSetBonusPoints('default', 3, this.value)" style="width:70px;font-size:13px;padding:5px 8px">
+      </div><div style="margin-top:10px;padding-top:10px;border-top:1px solid #f0d986">
+    <p style="font-size:12px;color:#7a5300;margin:0 0 8px">🔤 Sopa de letras: agrega las palabras a esconder. El sistema genera la cuadrícula automáticamente.</p>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+      <label style="font-size:12px;color:#7a5300;margin:0">Tamaño de cuadrícula:</label>
+      <select onchange="gpEditWsGridSize('default', 3, this.value)" style="font-size:13px;padding:4px 6px">
+        <option value="10">10 × 10</option>
+        <option value="12" selected="">12 × 12</option>
+        <option value="14">14 × 14</option>
+        <option value="16">16 × 16</option>
+      </select>
+    </div><div style="background:white;border:1px solid #d8dfe9;padding:6px 10px;border-radius:6px;margin-bottom:4px;display:flex;gap:8px;align-items:center">
+      <span style="background:#7a5300;color:white;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:700">1</span>
+      <input type="text" value="CETE" placeholder="PALABRA" style="flex:1;font-size:13px;text-transform:uppercase" onchange="gpEditWsWord('default', 3, 0, this.value)">
+      <button class="btn btn-sm btn-ghost" onclick="gpDeleteWsWord('default', 3, 0)" style="color:var(--accent);border-color:var(--accent)">🗑️</button>
+    </div><div style="background:white;border:1px solid #d8dfe9;padding:6px 10px;border-radius:6px;margin-bottom:4px;display:flex;gap:8px;align-items:center">
+      <span style="background:#7a5300;color:white;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:700">2</span>
+      <input type="text" value="BONDE" placeholder="PALABRA" style="flex:1;font-size:13px;text-transform:uppercase" onchange="gpEditWsWord('default', 3, 1, this.value)">
+      <button class="btn btn-sm btn-ghost" onclick="gpDeleteWsWord('default', 3, 1)" style="color:var(--accent);border-color:var(--accent)">🗑️</button>
+    </div><div style="background:white;border:1px solid #d8dfe9;padding:6px 10px;border-radius:6px;margin-bottom:4px;display:flex;gap:8px;align-items:center">
+      <span style="background:#7a5300;color:white;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:700">3</span>
+      <input type="text" value="UDIBONO" placeholder="PALABRA" style="flex:1;font-size:13px;text-transform:uppercase" onchange="gpEditWsWord('default', 3, 2, this.value)">
+      <button class="btn btn-sm btn-ghost" onclick="gpDeleteWsWord('default', 3, 2)" style="color:var(--accent);border-color:var(--accent)">🗑️</button>
+    </div><div style="background:white;border:1px solid #d8dfe9;padding:6px 10px;border-radius:6px;margin-bottom:4px;display:flex;gap:8px;align-items:center">
+      <span style="background:#7a5300;color:white;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:700">4</span>
+      <input type="text" value="PAGARE" placeholder="PALABRA" style="flex:1;font-size:13px;text-transform:uppercase" onchange="gpEditWsWord('default', 3, 3, this.value)">
+      <button class="btn btn-sm btn-ghost" onclick="gpDeleteWsWord('default', 3, 3)" style="color:var(--accent);border-color:var(--accent)">🗑️</button>
+    </div><div style="background:white;border:1px solid #d8dfe9;padding:6px 10px;border-radius:6px;margin-bottom:4px;display:flex;gap:8px;align-items:center">
+      <span style="background:#7a5300;color:white;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:700">5</span>
+      <input type="text" value="REPORTO" placeholder="PALABRA" style="flex:1;font-size:13px;text-transform:uppercase" onchange="gpEditWsWord('default', 3, 4, this.value)">
+      <button class="btn btn-sm btn-ghost" onclick="gpDeleteWsWord('default', 3, 4)" style="color:var(--accent);border-color:var(--accent)">🗑️</button>
+    </div><div style="background:white;border:1px solid #d8dfe9;padding:6px 10px;border-radius:6px;margin-bottom:4px;display:flex;gap:8px;align-items:center">
+      <span style="background:#7a5300;color:white;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:700">6</span>
+      <input type="text" value="DESCUENTO" placeholder="PALABRA" style="flex:1;font-size:13px;text-transform:uppercase" onchange="gpEditWsWord('default', 3, 5, this.value)">
+      <button class="btn btn-sm btn-ghost" onclick="gpDeleteWsWord('default', 3, 5)" style="color:var(--accent);border-color:var(--accent)">🗑️</button>
+    </div><div style="background:white;border:1px solid #d8dfe9;padding:6px 10px;border-radius:6px;margin-bottom:4px;display:flex;gap:8px;align-items:center">
+      <span style="background:#7a5300;color:white;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:700">7</span>
+      <input type="text" value="RENDIMIENTO" placeholder="PALABRA" style="flex:1;font-size:13px;text-transform:uppercase" onchange="gpEditWsWord('default', 3, 6, this.value)">
+      <button class="btn btn-sm btn-ghost" onclick="gpDeleteWsWord('default', 3, 6)" style="color:var(--accent);border-color:var(--accent)">🗑️</button>
+    </div><div style="background:white;border:1px solid #d8dfe9;padding:6px 10px;border-radius:6px;margin-bottom:4px;display:flex;gap:8px;align-items:center">
+      <span style="background:#7a5300;color:white;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:700">8</span>
+      <input type="text" value="PLAZO" placeholder="PALABRA" style="flex:1;font-size:13px;text-transform:uppercase" onchange="gpEditWsWord('default', 3, 7, this.value)">
+      <button class="btn btn-sm btn-ghost" onclick="gpDeleteWsWord('default', 3, 7)" style="color:var(--accent);border-color:var(--accent)">🗑️</button>
+    </div><div style="background:white;border:1px solid #d8dfe9;padding:6px 10px;border-radius:6px;margin-bottom:4px;display:flex;gap:8px;align-items:center">
+      <span style="background:#7a5300;color:white;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:700">9</span>
+      <input type="text" value="TASA" placeholder="PALABRA" style="flex:1;font-size:13px;text-transform:uppercase" onchange="gpEditWsWord('default', 3, 8, this.value)">
+      <button class="btn btn-sm btn-ghost" onclick="gpDeleteWsWord('default', 3, 8)" style="color:var(--accent);border-color:var(--accent)">🗑️</button>
+    </div><div style="background:white;border:1px solid #d8dfe9;padding:6px 10px;border-radius:6px;margin-bottom:4px;display:flex;gap:8px;align-items:center">
+      <span style="background:#7a5300;color:white;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:700">10</span>
+      <input type="text" value="TESORO" placeholder="PALABRA" style="flex:1;font-size:13px;text-transform:uppercase" onchange="gpEditWsWord('default', 3, 9, this.value)">
+      <button class="btn btn-sm btn-ghost" onclick="gpDeleteWsWord('default', 3, 9)" style="color:var(--accent);border-color:var(--accent)">🗑️</button>
+    </div><button class="btn btn-sm btn-primary" onclick="gpAddWsWord('default', 3)">➕ Agregar palabra</button>
+    <p class="muted" style="font-size:11px;margin-top:6px">El alumno gana si encuentra todas las palabras antes de que se acabe el tiempo (3 minutos).</p>
+  </div></div><div style="background:white;border:2px solid #ffc107;border-radius:10px;padding:14px 16px;margin-bottom:14px;">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+        <span style="background:#1f4e79;color:white;padding:4px 10px;border-radius:6px;font-size:13px;font-weight:700">V</span>
+        <span style="font-weight:700;font-size:14px;flex:1">Bonos con cupón y sin cupón</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#f4f6fa;padding:8px 12px;border-radius:6px">
+        <label style="margin:0;font-weight:600;font-size:13px">🎮 Bonus:</label>
+        <select onchange="gpSetBonusType('default', 4, this.value)" style="font-size:13px;padding:5px 8px;flex:1;min-width:200px">
+          <option value="_default">🎲 Por defecto (rotación)</option>
+          <option value="none">🚫 Deshabilitado (sin bonus)</option>
+          <option value="pong">🏓 Pong</option>
+          <option value="memory">💰 Memoria Financiera</option>
+          <option value="whack">🔨 Caza-Topos</option>
+          <option value="guitar">🎸 Ritmo Financiero (Guitar Hero)</option>
+          <option value="puzzle">🧩 Rompecabezas deslizante</option>
+          <option value="trivia" selected="">❓ Trivia (editable)</option>
+          <option value="crossword">📝 Crucigrama (editable)</option>
+          <option value="wordsearch">🔤 Sopa de letras (editable)</option>
+        </select>
+        <label style="margin:0;font-weight:600;font-size:13px">🏅 Puntos:</label>
+          <input type="number" min="0" max="20" value="2" onchange="gpSetBonusPoints('default', 4, this.value)" style="width:70px;font-size:13px;padding:5px 8px">
+      </div><div style="margin-top:10px;padding-top:10px;border-top:1px solid #f0d986">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px">
+      <span style="font-size:12px;color:#7a5300">Mínimo correctas para ganar:</span>
+      <input type="number" value="3" min="1" max="4" style="width:70px" onchange="gpEditTriviaRequired('default', 4, this.value)">
+      <span style="font-size:12px;color:#7a5300">de 4 preguntas</span>
+    </div><div style="background:white;border:1px solid #d8dfe9;padding:8px 10px;border-radius:6px;margin-bottom:6px">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+        <span style="background:#7a5300;color:white;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:700">P1</span>
+        <textarea style="flex:1;min-height:40px;font-size:13px" onchange="gpEditTriviaText('default', 4, 0, this.value)" placeholder="Enunciado de la pregunta">¿Qué es un bono cupón cero?</textarea>
+        <button class="btn btn-sm btn-ghost" onclick="gpDeleteTriviaQ('default', 4, 0)" style="color:var(--accent);border-color:var(--accent)" title="Eliminar pregunta">🗑️</button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px"><label style="display:flex;align-items:center;gap:6px;font-size:13px">
+        <input type="radio" name="gpTrivia_default_4_0" checked="" onchange="gpEditTriviaCorrect('default', 4, 0, 0)" title="Marcar como correcta">
+        <span style="font-weight:700;color:#1e7e34;width:18px">a)</span>
+        <input type="text" value="Un bono que no paga intereses periódicos y se vende a descuento" style="flex:1;font-size:13px" onchange="gpEditTriviaOption('default', 4, 0, 0, this.value)" placeholder="Opción a">
+      </label><label style="display:flex;align-items:center;gap:6px;font-size:13px">
+        <input type="radio" name="gpTrivia_default_4_0" onchange="gpEditTriviaCorrect('default', 4, 0, 1)" title="Marcar como correcta">
+        <span style="font-weight:700;color:#5b6470;width:18px">b)</span>
+        <input type="text" value="Un bono con tasa fija anual" style="flex:1;font-size:13px" onchange="gpEditTriviaOption('default', 4, 0, 1, this.value)" placeholder="Opción b">
+      </label><label style="display:flex;align-items:center;gap:6px;font-size:13px">
+        <input type="radio" name="gpTrivia_default_4_0" onchange="gpEditTriviaCorrect('default', 4, 0, 2)" title="Marcar como correcta">
+        <span style="font-weight:700;color:#5b6470;width:18px">c)</span>
+        <input type="text" value="Un bono que paga cupones cada mes" style="flex:1;font-size:13px" onchange="gpEditTriviaOption('default', 4, 0, 2, this.value)" placeholder="Opción c">
+      </label><label style="display:flex;align-items:center;gap:6px;font-size:13px">
+        <input type="radio" name="gpTrivia_default_4_0" onchange="gpEditTriviaCorrect('default', 4, 0, 3)" title="Marcar como correcta">
+        <span style="font-weight:700;color:#5b6470;width:18px">d)</span>
+        <input type="text" value="Un bono sin valor nominal" style="flex:1;font-size:13px" onchange="gpEditTriviaOption('default', 4, 0, 3, this.value)" placeholder="Opción d">
+      </label></div></div><div style="background:white;border:1px solid #d8dfe9;padding:8px 10px;border-radius:6px;margin-bottom:6px">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+        <span style="background:#7a5300;color:white;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:700">P2</span>
+        <textarea style="flex:1;min-height:40px;font-size:13px" onchange="gpEditTriviaText('default', 4, 1, this.value)" placeholder="Enunciado de la pregunta">¿Qué relación hay entre el precio de un bono y su tasa de mercado?</textarea>
+        <button class="btn btn-sm btn-ghost" onclick="gpDeleteTriviaQ('default', 4, 1)" style="color:var(--accent);border-color:var(--accent)" title="Eliminar pregunta">🗑️</button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px"><label style="display:flex;align-items:center;gap:6px;font-size:13px">
+        <input type="radio" name="gpTrivia_default_4_1" onchange="gpEditTriviaCorrect('default', 4, 1, 0)" title="Marcar como correcta">
+        <span style="font-weight:700;color:#5b6470;width:18px">a)</span>
+        <input type="text" value="Directa: si sube la tasa, sube el precio" style="flex:1;font-size:13px" onchange="gpEditTriviaOption('default', 4, 1, 0, this.value)" placeholder="Opción a">
+      </label><label style="display:flex;align-items:center;gap:6px;font-size:13px">
+        <input type="radio" name="gpTrivia_default_4_1" checked="" onchange="gpEditTriviaCorrect('default', 4, 1, 1)" title="Marcar como correcta">
+        <span style="font-weight:700;color:#1e7e34;width:18px">b)</span>
+        <input type="text" value="Inversa: si sube la tasa, baja el precio" style="flex:1;font-size:13px" onchange="gpEditTriviaOption('default', 4, 1, 1, this.value)" placeholder="Opción b">
+      </label><label style="display:flex;align-items:center;gap:6px;font-size:13px">
+        <input type="radio" name="gpTrivia_default_4_1" onchange="gpEditTriviaCorrect('default', 4, 1, 2)" title="Marcar como correcta">
+        <span style="font-weight:700;color:#5b6470;width:18px">c)</span>
+        <input type="text" value="No hay relación" style="flex:1;font-size:13px" onchange="gpEditTriviaOption('default', 4, 1, 2, this.value)" placeholder="Opción c">
+      </label><label style="display:flex;align-items:center;gap:6px;font-size:13px">
+        <input type="radio" name="gpTrivia_default_4_1" onchange="gpEditTriviaCorrect('default', 4, 1, 3)" title="Marcar como correcta">
+        <span style="font-weight:700;color:#5b6470;width:18px">d)</span>
+        <input type="text" value="Sólo aplica a bonos cupón cero" style="flex:1;font-size:13px" onchange="gpEditTriviaOption('default', 4, 1, 3, this.value)" placeholder="Opción d">
+      </label></div></div><div style="background:white;border:1px solid #d8dfe9;padding:8px 10px;border-radius:6px;margin-bottom:6px">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+        <span style="background:#7a5300;color:white;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:700">P3</span>
+        <textarea style="flex:1;min-height:40px;font-size:13px" onchange="gpEditTriviaText('default', 4, 2, this.value)" placeholder="Enunciado de la pregunta">¿Qué es la TIR (Tasa Interna de Retorno) de un bono?</textarea>
+        <button class="btn btn-sm btn-ghost" onclick="gpDeleteTriviaQ('default', 4, 2)" style="color:var(--accent);border-color:var(--accent)" title="Eliminar pregunta">🗑️</button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px"><label style="display:flex;align-items:center;gap:6px;font-size:13px">
+        <input type="radio" name="gpTrivia_default_4_2" onchange="gpEditTriviaCorrect('default', 4, 2, 0)" title="Marcar como correcta">
+        <span style="font-weight:700;color:#5b6470;width:18px">a)</span>
+        <input type="text" value="El cupón anual" style="flex:1;font-size:13px" onchange="gpEditTriviaOption('default', 4, 2, 0, this.value)" placeholder="Opción a">
+      </label><label style="display:flex;align-items:center;gap:6px;font-size:13px">
+        <input type="radio" name="gpTrivia_default_4_2" onchange="gpEditTriviaCorrect('default', 4, 2, 1)" title="Marcar como correcta">
+        <span style="font-weight:700;color:#5b6470;width:18px">b)</span>
+        <input type="text" value="El rendimiento exigido en el mercado" style="flex:1;font-size:13px" onchange="gpEditTriviaOption('default', 4, 2, 1, this.value)" placeholder="Opción b">
+      </label><label style="display:flex;align-items:center;gap:6px;font-size:13px">
+        <input type="radio" name="gpTrivia_default_4_2" checked="" onchange="gpEditTriviaCorrect('default', 4, 2, 2)" title="Marcar como correcta">
+        <span style="font-weight:700;color:#1e7e34;width:18px">c)</span>
+        <input type="text" value="La tasa que iguala el VP de los flujos al precio del bono" style="flex:1;font-size:13px" onchange="gpEditTriviaOption('default', 4, 2, 2, this.value)" placeholder="Opción c">
+      </label><label style="display:flex;align-items:center;gap:6px;font-size:13px">
+        <input type="radio" name="gpTrivia_default_4_2" onchange="gpEditTriviaCorrect('default', 4, 2, 3)" title="Marcar como correcta">
+        <span style="font-weight:700;color:#5b6470;width:18px">d)</span>
+        <input type="text" value="La tasa libre de riesgo" style="flex:1;font-size:13px" onchange="gpEditTriviaOption('default', 4, 2, 3, this.value)" placeholder="Opción d">
+      </label></div></div><div style="background:white;border:1px solid #d8dfe9;padding:8px 10px;border-radius:6px;margin-bottom:6px">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+        <span style="background:#7a5300;color:white;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:700">P4</span>
+        <textarea style="flex:1;min-height:40px;font-size:13px" onchange="gpEditTriviaText('default', 4, 3, this.value)" placeholder="Enunciado de la pregunta">Si un bono se vende sobre la par significa que…</textarea>
+        <button class="btn btn-sm btn-ghost" onclick="gpDeleteTriviaQ('default', 4, 3)" style="color:var(--accent);border-color:var(--accent)" title="Eliminar pregunta">🗑️</button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px"><label style="display:flex;align-items:center;gap:6px;font-size:13px">
+        <input type="radio" name="gpTrivia_default_4_3" checked="" onchange="gpEditTriviaCorrect('default', 4, 3, 0)" title="Marcar como correcta">
+        <span style="font-weight:700;color:#1e7e34;width:18px">a)</span>
+        <input type="text" value="Su precio es mayor a su valor nominal" style="flex:1;font-size:13px" onchange="gpEditTriviaOption('default', 4, 3, 0, this.value)" placeholder="Opción a">
+      </label><label style="display:flex;align-items:center;gap:6px;font-size:13px">
+        <input type="radio" name="gpTrivia_default_4_3" onchange="gpEditTriviaCorrect('default', 4, 3, 1)" title="Marcar como correcta">
+        <span style="font-weight:700;color:#5b6470;width:18px">b)</span>
+        <input type="text" value="Su precio es menor a su valor nominal" style="flex:1;font-size:13px" onchange="gpEditTriviaOption('default', 4, 3, 1, this.value)" placeholder="Opción b">
+      </label><label style="display:flex;align-items:center;gap:6px;font-size:13px">
+        <input type="radio" name="gpTrivia_default_4_3" onchange="gpEditTriviaCorrect('default', 4, 3, 2)" title="Marcar como correcta">
+        <span style="font-weight:700;color:#5b6470;width:18px">c)</span>
+        <input type="text" value="No paga cupón" style="flex:1;font-size:13px" onchange="gpEditTriviaOption('default', 4, 3, 2, this.value)" placeholder="Opción c">
+      </label><label style="display:flex;align-items:center;gap:6px;font-size:13px">
+        <input type="radio" name="gpTrivia_default_4_3" onchange="gpEditTriviaCorrect('default', 4, 3, 3)" title="Marcar como correcta">
+        <span style="font-weight:700;color:#5b6470;width:18px">d)</span>
+        <input type="text" value="Cotiza en moneda extranjera" style="flex:1;font-size:13px" onchange="gpEditTriviaOption('default', 4, 3, 3, this.value)" placeholder="Opción d">
+      </label></div></div><button class="btn btn-sm btn-primary" onclick="gpAddTriviaQ('default', 4)">➕ Agregar pregunta</button>
+    <p class="muted" style="font-size:11px;margin-top:6px">Las preguntas son INDEPENDIENTES del examen.</p>
+  </div></div><div style="background:white;border:2px solid #ffc107;border-radius:10px;padding:14px 16px;margin-bottom:14px;">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+        <span style="background:#1f4e79;color:white;padding:4px 10px;border-radius:6px;font-size:13px;font-weight:700">VI</span>
+        <span style="font-weight:700;font-size:14px;flex:1">Relación de columnas (arrastrar)</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#f4f6fa;padding:8px 12px;border-radius:6px">
+        <label style="margin:0;font-weight:600;font-size:13px">🎮 Bonus:</label>
+        <select onchange="gpSetBonusType('default', 5, this.value)" style="font-size:13px;padding:5px 8px;flex:1;min-width:200px">
+          <option value="_default" selected="">🎲 Por defecto (rotación)</option>
+          <option value="none">🚫 Deshabilitado (sin bonus)</option>
+          <option value="pong">🏓 Pong</option>
+          <option value="memory">💰 Memoria Financiera</option>
+          <option value="whack">🔨 Caza-Topos</option>
+          <option value="guitar">🎸 Ritmo Financiero (Guitar Hero)</option>
+          <option value="puzzle">🧩 Rompecabezas deslizante</option>
+          <option value="trivia">❓ Trivia (editable)</option>
+          <option value="crossword">📝 Crucigrama (editable)</option>
+          <option value="wordsearch">🔤 Sopa de letras (editable)</option>
+        </select>
+        <label style="margin:0;font-weight:600;font-size:13px">🏅 Puntos:</label>
+          <input type="number" min="0" max="20" value="1" onchange="gpSetBonusPoints('default', 5, this.value)" style="width:70px;font-size:13px;padding:5px 8px">
+      </div><p style="font-size:12px;color:#5b6470;margin:8px 0 0">Por defecto en esta sección: 🏓 <b>Pong</b></p></div><div style="background:white;border:2px solid #ffc107;border-radius:10px;padding:14px 16px;margin-bottom:14px;">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+        <span style="background:#1f4e79;color:white;padding:4px 10px;border-radius:6px;font-size:13px;font-weight:700">VII</span>
+        <span style="font-weight:700;font-size:14px;flex:1">Pregunta abierta · WACC</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#f4f6fa;padding:8px 12px;border-radius:6px">
+        <label style="margin:0;font-weight:600;font-size:13px">🎮 Bonus:</label>
+        <select onchange="gpSetBonusType('default', 6, this.value)" style="font-size:13px;padding:5px 8px;flex:1;min-width:200px">
+          <option value="_default" selected="">🎲 Por defecto (rotación)</option>
+          <option value="none">🚫 Deshabilitado (sin bonus)</option>
+          <option value="pong">🏓 Pong</option>
+          <option value="memory">💰 Memoria Financiera</option>
+          <option value="whack">🔨 Caza-Topos</option>
+          <option value="guitar">🎸 Ritmo Financiero (Guitar Hero)</option>
+          <option value="puzzle">🧩 Rompecabezas deslizante</option>
+          <option value="trivia">❓ Trivia (editable)</option>
+          <option value="crossword">📝 Crucigrama (editable)</option>
+          <option value="wordsearch">🔤 Sopa de letras (editable)</option>
+        </select>
+        <label style="margin:0;font-weight:600;font-size:13px">🏅 Puntos:</label>
+          <input type="number" min="0" max="20" value="1" onchange="gpSetBonusPoints('default', 6, this.value)" style="width:70px;font-size:13px;padding:5px 8px">
+      </div><p style="font-size:12px;color:#5b6470;margin:8px 0 0">Por defecto en esta sección: 💰 <b>Memoria Financiera</b></p></div><div style="background:white;border:2px solid #ffc107;border-radius:10px;padding:14px 16px;margin-bottom:14px;">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+        <span style="background:#1f4e79;color:white;padding:4px 10px;border-radius:6px;font-size:13px;font-weight:700">VIII</span>
+        <span style="font-weight:700;font-size:14px;flex:1">Pregunta abierta · Tablas de amortización</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#f4f6fa;padding:8px 12px;border-radius:6px">
+        <label style="margin:0;font-weight:600;font-size:13px">🎮 Bonus:</label>
+        <select onchange="gpSetBonusType('default', 7, this.value)" style="font-size:13px;padding:5px 8px;flex:1;min-width:200px">
+          <option value="_default" selected="">🎲 Por defecto (rotación)</option>
+          <option value="none">🚫 Deshabilitado (sin bonus)</option>
+          <option value="pong">🏓 Pong</option>
+          <option value="memory">💰 Memoria Financiera</option>
+          <option value="whack">🔨 Caza-Topos</option>
+          <option value="guitar">🎸 Ritmo Financiero (Guitar Hero)</option>
+          <option value="puzzle">🧩 Rompecabezas deslizante</option>
+          <option value="trivia">❓ Trivia (editable)</option>
+          <option value="crossword">📝 Crucigrama (editable)</option>
+          <option value="wordsearch">🔤 Sopa de letras (editable)</option>
+        </select>
+        <label style="margin:0;font-weight:600;font-size:13px">🏅 Puntos:</label>
+          <input type="number" min="0" max="20" value="1" onchange="gpSetBonusPoints('default', 7, this.value)" style="width:70px;font-size:13px;padding:5px 8px">
+      </div><p style="font-size:12px;color:#5b6470;margin:8px 0 0">Por defecto en esta sección: 🔨 <b>Caza-Topos</b></p></div></div>
     </div>
     </div> <!-- /admin-tab-content games -->
 
@@ -1002,12 +1353,36 @@ CREATE POLICY "docente_select" ON resultados FOR SELECT TO anon USING (true);</d
         </div>
       </div>
 
-      <div id="examsList" style="margin-top:14px"></div>
+      <div id="examsList" style="margin-top:14px"><div class="exam-card  " data-id="admin_fin">
+      <input class="exam-title-input" type="text" value="Examen · Administración Financiera" onchange="renameExamTitle('admin_fin', this.value)">
+      
+      <span class="badge-questions">23 preguntas</span>
+      <span class="badge-students">0 alumno(s)</span>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn btn-sm btn-primary" onclick="editExam('admin_fin')">✏️ Editar</button>
+        <button class="btn btn-sm btn-ok" onclick="setActiveExam('admin_fin')" title="Marcarlo como activo">★ Activar</button>
+        <button class="btn btn-sm btn-ghost" onclick="duplicateExamUI('admin_fin')">📋 Duplicar</button>
+        <button class="btn btn-sm btn-ghost" onclick="exportExamAcadGuard('admin_fin')" title="Descargar en formato AcadGuard (JSON legible)" style="color:#2e75b6;border-color:#2e75b6">📤 Exportar</button>
+        <button class="btn btn-sm btn-ghost" onclick="deleteExamUI('admin_fin')" style="color:var(--accent);border-color:var(--accent)">🗑️</button>
+      </div>
+    </div><div class="exam-card editing active" data-id="default">
+      <input class="exam-title-input" type="text" value="Examen Final · Financiamiento Empresarial" onchange="renameExamTitle('default', this.value)">
+      <span class="badge-active">★ Activo</span>
+      <span class="badge-questions">19 preguntas</span>
+      <span class="badge-students">0 alumno(s)</span>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn btn-sm btn-primary" disabled="">✏️ Editando</button>
+        
+        <button class="btn btn-sm btn-ghost" onclick="duplicateExamUI('default')">📋 Duplicar</button>
+        <button class="btn btn-sm btn-ghost" onclick="exportExamAcadGuard('default')" title="Descargar en formato AcadGuard (JSON legible)" style="color:#2e75b6;border-color:#2e75b6">📤 Exportar</button>
+        <button class="btn btn-sm btn-ghost" onclick="deleteExamUI('default')" style="color:var(--accent);border-color:var(--accent)">🗑️</button>
+      </div>
+    </div></div>
     </div>
 
     <div class="card" id="examEditorCard">
       <h2 style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-        ✏️ Editar examen: <span id="editingExamTitle" style="color:#2E75B6"></span>
+        ✏️ Editar examen: <span id="editingExamTitle" style="color:#2E75B6">Examen Final · Financiamiento Empresarial</span>
       </h2>
       <p class="muted">Estás editando este examen. Los cambios afectan SÓLO a este examen, no a otros.</p>
 
@@ -1028,7 +1403,7 @@ CREATE POLICY "docente_select" ON resultados FOR SELECT TO anon USING (true);</d
             <input id="examScheduledEnd" type="datetime-local" onchange="saveExamSchedule()">
           </div>
         </div>
-        <p id="examScheduleMsg" class="muted" style="margin:8px 0 0;font-size:12px"></p>
+        <p id="examScheduleMsg" class="muted" style="margin: 8px 0px 0px; font-size: 12px; color: rgb(91, 100, 112);">📍 Sin programación. Los alumnos pueden ingresar en cualquier momento.</p>
       </div>
 
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
@@ -1041,7 +1416,1027 @@ CREATE POLICY "docente_select" ON resultados FOR SELECT TO anon USING (true);</d
       </div>
 
       <!-- Visual editor -->
-      <div id="bankVisual"></div>
+      <div id="bankVisual"><div class="qe-section" data-si="0">
+      <h3>
+        <span style="background:var(--primary);color:white;padding:4px 10px;border-radius:6px;font-size:14px">Sección I</span>
+        <input type="text" value="Función de la banca (activo y pasivo)" onchange="editSectionName(0, this.value)" placeholder="Nombre de la sección">
+        <span class="muted">Peso:</span>
+        <input type="number" value="10" min="0" style="width:70px" onchange="editSectionWeight(0, this.value)">
+        <span class="muted">pts</span>
+        <button class="btn btn-sm btn-ghost" onclick="moveSection(0, -1)" title="Subir">⬆</button>
+        <button class="btn btn-sm btn-ghost" onclick="moveSection(0, 1)" title="Bajar">⬇</button>
+        <button class="btn btn-sm btn-ghost" onclick="deleteSection(0)" style="color:var(--accent);border-color:var(--accent)" title="Eliminar">🗑️</button>
+      </h3><div style="background:#fff8e1;border:1px solid #f0d986;border-radius:8px;padding:10px 14px;margin-bottom:14px">
+      <label style="display:flex;align-items:center;gap:10px;margin:0;font-weight:600;color:#7a5300">
+        🎮 Bonus de esta sección:
+        <select onchange="editSectionBonus(0, this.value)" style="font-size:13px;padding:4px 8px">
+          <option value="_default">🎲 Por defecto (rotación automática)</option><option value="none">🚫 Sin bonus en esta sección</option><option value="pong">🏓 Pong</option><option value="memory">💰 Memoria Financiera</option><option value="whack">🔨 Caza-Topos</option><option value="guitar">🎸 Ritmo Financiero (Guitar Hero)</option><option value="trivia">❓ Trivia (preguntas personalizadas)</option>
+        </select>
+      </label></div><div class="qe-question" data-qi="0">
+        <div class="qe-meta">
+          <span class="points-tag">3 pts</span>
+          <select onchange="editQuestionType(0,0,this.value)">
+            <option value="mc" selected="">Opción múltiple</option>
+            <option value="calc">Cálculo</option>
+            <option value="open">Abierta</option>
+            <option value="match">Relacionar columnas</option>
+          </select>
+          <span class="muted">Puntos:</span>
+          <input type="number" class="pts-input" value="3" min="0" onchange="editQuestionPoints(0,0,this.value)">
+          <span style="margin-left:auto">
+            <button class="btn btn-sm btn-ghost" onclick="moveQuestion(0,0,-1)">⬆</button>
+            <button class="btn btn-sm btn-ghost" onclick="moveQuestion(0,0,1)">⬇</button>
+            <button class="btn btn-sm btn-ghost" onclick="deleteQuestion(0,0)" style="color:var(--accent);border-color:var(--accent)">🗑️</button>
+          </span>
+        </div>
+        <textarea style="min-height:60px;width:100%" onchange="editQuestionText(0,0,this.value)" placeholder="Enunciado de la pregunta">Una empresa industrial mantiene un depósito a plazo fijo en su banco por $8,000,000. Desde la perspectiva del banco, esta operación se clasifica como…</textarea>
+        <div class="qe-options"><p class="muted" style="font-size:12px;margin:4px 0">Marca la opción correcta con el círculo de la izquierda:</p><div class="qe-option">
+        <input type="radio" class="correct-radio" name="q-0-0-correct" onchange="editQuestionCorrect(0,0,0)">
+        <span style="font-weight:700;width:20px">a)</span>
+        <input type="text" value="Operación activa, porque el banco genera ingresos de intereses sobre ese depósito." onchange="editQuestionOption(0,0,0,this.value)" placeholder="Opción 1">
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuestionOption(0,0,0)" style="color:var(--accent)">✕</button>
+      </div><div class="qe-option">
+        <input type="radio" class="correct-radio" name="q-0-0-correct" checked="" onchange="editQuestionCorrect(0,0,1)">
+        <span style="font-weight:700;width:20px">b)</span>
+        <input type="text" value="Operación pasiva, porque representa un pasivo del banco frente al cliente y constituye una fuente de fondeo." onchange="editQuestionOption(0,0,1,this.value)" placeholder="Opción 2">
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuestionOption(0,0,1)" style="color:var(--accent)">✕</button>
+      </div><div class="qe-option">
+        <input type="radio" class="correct-radio" name="q-0-0-correct" onchange="editQuestionCorrect(0,0,2)">
+        <span style="font-weight:700;width:20px">c)</span>
+        <input type="text" value="Operación neutral, porque sólo refleja un movimiento contable interno." onchange="editQuestionOption(0,0,2,this.value)" placeholder="Opción 3">
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuestionOption(0,0,2)" style="color:var(--accent)">✕</button>
+      </div><div class="qe-option">
+        <input type="radio" class="correct-radio" name="q-0-0-correct" onchange="editQuestionCorrect(0,0,3)">
+        <span style="font-weight:700;width:20px">d)</span>
+        <input type="text" value="Operación activa, porque el banco utiliza esos recursos para colocar créditos." onchange="editQuestionOption(0,0,3,this.value)" placeholder="Opción 4">
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuestionOption(0,0,3)" style="color:var(--accent)">✕</button>
+      </div><button class="btn btn-sm btn-ghost" onclick="addQuestionOption(0,0)">➕ Agregar opción</button></div>
+      </div><div class="qe-question" data-qi="1">
+        <div class="qe-meta">
+          <span class="points-tag">3 pts</span>
+          <select onchange="editQuestionType(0,1,this.value)">
+            <option value="mc" selected="">Opción múltiple</option>
+            <option value="calc">Cálculo</option>
+            <option value="open">Abierta</option>
+            <option value="match">Relacionar columnas</option>
+          </select>
+          <span class="muted">Puntos:</span>
+          <input type="number" class="pts-input" value="3" min="0" onchange="editQuestionPoints(0,1,this.value)">
+          <span style="margin-left:auto">
+            <button class="btn btn-sm btn-ghost" onclick="moveQuestion(0,1,-1)">⬆</button>
+            <button class="btn btn-sm btn-ghost" onclick="moveQuestion(0,1,1)">⬇</button>
+            <button class="btn btn-sm btn-ghost" onclick="deleteQuestion(0,1)" style="color:var(--accent);border-color:var(--accent)">🗑️</button>
+          </span>
+        </div>
+        <textarea style="min-height:60px;width:100%" onchange="editQuestionText(0,1,this.value)" placeholder="Enunciado de la pregunta">¿Cuál de las siguientes operaciones forma parte del balance ACTIVO de la banca comercial?</textarea>
+        <div class="qe-options"><p class="muted" style="font-size:12px;margin:4px 0">Marca la opción correcta con el círculo de la izquierda:</p><div class="qe-option">
+        <input type="radio" class="correct-radio" name="q-0-1-correct" onchange="editQuestionCorrect(0,1,0)">
+        <span style="font-weight:700;width:20px">a)</span>
+        <input type="text" value="Captación de cuentas de cheques de personas físicas." onchange="editQuestionOption(0,1,0,this.value)" placeholder="Opción 1">
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuestionOption(0,1,0)" style="color:var(--accent)">✕</button>
+      </div><div class="qe-option">
+        <input type="radio" class="correct-radio" name="q-0-1-correct" onchange="editQuestionCorrect(0,1,1)">
+        <span style="font-weight:700;width:20px">b)</span>
+        <input type="text" value="Emisión de pagarés bancarios con rendimiento liquidable al vencimiento." onchange="editQuestionOption(0,1,1,this.value)" placeholder="Opción 2">
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuestionOption(0,1,1)" style="color:var(--accent)">✕</button>
+      </div><div class="qe-option">
+        <input type="radio" class="correct-radio" name="q-0-1-correct" checked="" onchange="editQuestionCorrect(0,1,2)">
+        <span style="font-weight:700;width:20px">c)</span>
+        <input type="text" value="Otorgamiento de créditos comerciales a empresas industriales." onchange="editQuestionOption(0,1,2,this.value)" placeholder="Opción 3">
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuestionOption(0,1,2)" style="color:var(--accent)">✕</button>
+      </div><div class="qe-option">
+        <input type="radio" class="correct-radio" name="q-0-1-correct" onchange="editQuestionCorrect(0,1,3)">
+        <span style="font-weight:700;width:20px">d)</span>
+        <input type="text" value="Recepción de depósitos a plazo de inversionistas institucionales." onchange="editQuestionOption(0,1,3,this.value)" placeholder="Opción 4">
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuestionOption(0,1,3)" style="color:var(--accent)">✕</button>
+      </div><button class="btn btn-sm btn-ghost" onclick="addQuestionOption(0,1)">➕ Agregar opción</button></div>
+      </div><div class="qe-question" data-qi="2">
+        <div class="qe-meta">
+          <span class="points-tag">4 pts</span>
+          <select onchange="editQuestionType(0,2,this.value)">
+            <option value="mc">Opción múltiple</option>
+            <option value="calc" selected="">Cálculo</option>
+            <option value="open">Abierta</option>
+            <option value="match">Relacionar columnas</option>
+          </select>
+          <span class="muted">Puntos:</span>
+          <input type="number" class="pts-input" value="4" min="0" onchange="editQuestionPoints(0,2,this.value)">
+          <span style="margin-left:auto">
+            <button class="btn btn-sm btn-ghost" onclick="moveQuestion(0,2,-1)">⬆</button>
+            <button class="btn btn-sm btn-ghost" onclick="moveQuestion(0,2,1)">⬇</button>
+            <button class="btn btn-sm btn-ghost" onclick="deleteQuestion(0,2)" style="color:var(--accent);border-color:var(--accent)">🗑️</button>
+          </span>
+        </div>
+        <textarea style="min-height:60px;width:100%" onchange="editQuestionText(0,2,this.value)" placeholder="Enunciado de la pregunta">Una empresa decide invertir $250,000 hoy en un fondo bancario que paga 8.5% anual con capitalización MENSUAL durante 4 años. ¿Cuál es el valor FUTURO de esta inversión al final del plazo?</textarea>
+        <div class="qe-options"><p class="muted" style="font-size:12px;margin:4px 0">Marca la opción correcta con el círculo de la izquierda:</p><div class="qe-option">
+        <input type="radio" class="correct-radio" name="q-0-2-correct" onchange="editQuestionCorrect(0,2,0)">
+        <span style="font-weight:700;width:20px">a)</span>
+        <input type="text" value="$337,920.45" onchange="editQuestionOption(0,2,0,this.value)" placeholder="Opción 1">
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuestionOption(0,2,0)" style="color:var(--accent)">✕</button>
+      </div><div class="qe-option">
+        <input type="radio" class="correct-radio" name="q-0-2-correct" checked="" onchange="editQuestionCorrect(0,2,1)">
+        <span style="font-weight:700;width:20px">b)</span>
+        <input type="text" value="$350,816.19" onchange="editQuestionOption(0,2,1,this.value)" placeholder="Opción 2">
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuestionOption(0,2,1)" style="color:var(--accent)">✕</button>
+      </div><div class="qe-option">
+        <input type="radio" class="correct-radio" name="q-0-2-correct" onchange="editQuestionCorrect(0,2,2)">
+        <span style="font-weight:700;width:20px">c)</span>
+        <input type="text" value="$365,213.78" onchange="editQuestionOption(0,2,2,this.value)" placeholder="Opción 3">
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuestionOption(0,2,2)" style="color:var(--accent)">✕</button>
+      </div><div class="qe-option">
+        <input type="radio" class="correct-radio" name="q-0-2-correct" onchange="editQuestionCorrect(0,2,3)">
+        <span style="font-weight:700;width:20px">d)</span>
+        <input type="text" value="$382,650.12" onchange="editQuestionOption(0,2,3,this.value)" placeholder="Opción 4">
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuestionOption(0,2,3)" style="color:var(--accent)">✕</button>
+      </div><button class="btn btn-sm btn-ghost" onclick="addQuestionOption(0,2)">➕ Agregar opción</button></div>
+      </div><button class="btn btn-sm btn-primary" onclick="addQuestion(0)">➕ Agregar pregunta a esta sección</button>
+    </div><div class="qe-section" data-si="1">
+      <h3>
+        <span style="background:var(--primary);color:white;padding:4px 10px;border-radius:6px;font-size:14px">Sección II</span>
+        <input type="text" value="Tipos de crédito" onchange="editSectionName(1, this.value)" placeholder="Nombre de la sección">
+        <span class="muted">Peso:</span>
+        <input type="number" value="10" min="0" style="width:70px" onchange="editSectionWeight(1, this.value)">
+        <span class="muted">pts</span>
+        <button class="btn btn-sm btn-ghost" onclick="moveSection(1, -1)" title="Subir">⬆</button>
+        <button class="btn btn-sm btn-ghost" onclick="moveSection(1, 1)" title="Bajar">⬇</button>
+        <button class="btn btn-sm btn-ghost" onclick="deleteSection(1)" style="color:var(--accent);border-color:var(--accent)" title="Eliminar">🗑️</button>
+      </h3><div style="background:#fff8e1;border:1px solid #f0d986;border-radius:8px;padding:10px 14px;margin-bottom:14px">
+      <label style="display:flex;align-items:center;gap:10px;margin:0;font-weight:600;color:#7a5300">
+        🎮 Bonus de esta sección:
+        <select onchange="editSectionBonus(1, this.value)" style="font-size:13px;padding:4px 8px">
+          <option value="_default" selected="">🎲 Por defecto (rotación automática)</option><option value="none">🚫 Sin bonus en esta sección</option><option value="pong">🏓 Pong</option><option value="memory">💰 Memoria Financiera</option><option value="whack">🔨 Caza-Topos</option><option value="guitar">🎸 Ritmo Financiero (Guitar Hero)</option><option value="trivia">❓ Trivia (preguntas personalizadas)</option>
+        </select>
+      </label></div><div class="qe-question" data-qi="0">
+        <div class="qe-meta">
+          <span class="points-tag">3 pts</span>
+          <select onchange="editQuestionType(1,0,this.value)">
+            <option value="mc" selected="">Opción múltiple</option>
+            <option value="calc">Cálculo</option>
+            <option value="open">Abierta</option>
+            <option value="match">Relacionar columnas</option>
+          </select>
+          <span class="muted">Puntos:</span>
+          <input type="number" class="pts-input" value="3" min="0" onchange="editQuestionPoints(1,0,this.value)">
+          <span style="margin-left:auto">
+            <button class="btn btn-sm btn-ghost" onclick="moveQuestion(1,0,-1)">⬆</button>
+            <button class="btn btn-sm btn-ghost" onclick="moveQuestion(1,0,1)">⬇</button>
+            <button class="btn btn-sm btn-ghost" onclick="deleteQuestion(1,0)" style="color:var(--accent);border-color:var(--accent)">🗑️</button>
+          </span>
+        </div>
+        <textarea style="min-height:60px;width:100%" onchange="editQuestionText(1,0,this.value)" placeholder="Enunciado de la pregunta">Una cadena de supermercados necesita financiar la compra de inventario de temporada (mercancía perecedera) que se rotará en 90 días. ¿Qué crédito bancario es el MÁS adecuado por su naturaleza?</textarea>
+        <div class="qe-options"><p class="muted" style="font-size:12px;margin:4px 0">Marca la opción correcta con el círculo de la izquierda:</p><div class="qe-option">
+        <input type="radio" class="correct-radio" name="q-1-0-correct" onchange="editQuestionCorrect(1,0,0)">
+        <span style="font-weight:700;width:20px">a)</span>
+        <input type="text" value="Crédito refaccionario." onchange="editQuestionOption(1,0,0,this.value)" placeholder="Opción 1">
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuestionOption(1,0,0)" style="color:var(--accent)">✕</button>
+      </div><div class="qe-option">
+        <input type="radio" class="correct-radio" name="q-1-0-correct" onchange="editQuestionCorrect(1,0,1)">
+        <span style="font-weight:700;width:20px">b)</span>
+        <input type="text" value="Crédito hipotecario industrial." onchange="editQuestionOption(1,0,1,this.value)" placeholder="Opción 2">
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuestionOption(1,0,1)" style="color:var(--accent)">✕</button>
+      </div><div class="qe-option">
+        <input type="radio" class="correct-radio" name="q-1-0-correct" checked="" onchange="editQuestionCorrect(1,0,2)">
+        <span style="font-weight:700;width:20px">c)</span>
+        <input type="text" value="Crédito de habilitación o avío." onchange="editQuestionOption(1,0,2,this.value)" placeholder="Opción 3">
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuestionOption(1,0,2)" style="color:var(--accent)">✕</button>
+      </div><div class="qe-option">
+        <input type="radio" class="correct-radio" name="q-1-0-correct" onchange="editQuestionCorrect(1,0,3)">
+        <span style="font-weight:700;width:20px">d)</span>
+        <input type="text" value="Crédito sindicado a 7 años." onchange="editQuestionOption(1,0,3,this.value)" placeholder="Opción 4">
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuestionOption(1,0,3)" style="color:var(--accent)">✕</button>
+      </div><button class="btn btn-sm btn-ghost" onclick="addQuestionOption(1,0)">➕ Agregar opción</button></div>
+      </div><div class="qe-question" data-qi="1">
+        <div class="qe-meta">
+          <span class="points-tag">3 pts</span>
+          <select onchange="editQuestionType(1,1,this.value)">
+            <option value="mc" selected="">Opción múltiple</option>
+            <option value="calc">Cálculo</option>
+            <option value="open">Abierta</option>
+            <option value="match">Relacionar columnas</option>
+          </select>
+          <span class="muted">Puntos:</span>
+          <input type="number" class="pts-input" value="3" min="0" onchange="editQuestionPoints(1,1,this.value)">
+          <span style="margin-left:auto">
+            <button class="btn btn-sm btn-ghost" onclick="moveQuestion(1,1,-1)">⬆</button>
+            <button class="btn btn-sm btn-ghost" onclick="moveQuestion(1,1,1)">⬇</button>
+            <button class="btn btn-sm btn-ghost" onclick="deleteQuestion(1,1)" style="color:var(--accent);border-color:var(--accent)">🗑️</button>
+          </span>
+        </div>
+        <textarea style="min-height:60px;width:100%" onchange="editQuestionText(1,1,this.value)" placeholder="Enunciado de la pregunta">El crédito refaccionario se distingue del de habilitación o avío principalmente porque…</textarea>
+        <div class="qe-options"><p class="muted" style="font-size:12px;margin:4px 0">Marca la opción correcta con el círculo de la izquierda:</p><div class="qe-option">
+        <input type="radio" class="correct-radio" name="q-1-1-correct" onchange="editQuestionCorrect(1,1,0)">
+        <span style="font-weight:700;width:20px">a)</span>
+        <input type="text" value="Sólo lo otorga la banca de desarrollo, no la banca múltiple." onchange="editQuestionOption(1,1,0,this.value)" placeholder="Opción 1">
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuestionOption(1,1,0)" style="color:var(--accent)">✕</button>
+      </div><div class="qe-option">
+        <input type="radio" class="correct-radio" name="q-1-1-correct" checked="" onchange="editQuestionCorrect(1,1,1)">
+        <span style="font-weight:700;width:20px">b)</span>
+        <input type="text" value="Se destina a la adquisición de activos fijos productivos (maquinaria, instalaciones) y normalmente es de mayor plazo." onchange="editQuestionOption(1,1,1,this.value)" placeholder="Opción 2">
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuestionOption(1,1,1)" style="color:var(--accent)">✕</button>
+      </div><div class="qe-option">
+        <input type="radio" class="correct-radio" name="q-1-1-correct" onchange="editQuestionCorrect(1,1,2)">
+        <span style="font-weight:700;width:20px">c)</span>
+        <input type="text" value="Es revolvente y se renueva automáticamente cada año." onchange="editQuestionOption(1,1,2,this.value)" placeholder="Opción 3">
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuestionOption(1,1,2)" style="color:var(--accent)">✕</button>
+      </div><div class="qe-option">
+        <input type="radio" class="correct-radio" name="q-1-1-correct" onchange="editQuestionCorrect(1,1,3)">
+        <span style="font-weight:700;width:20px">d)</span>
+        <input type="text" value="Se garantiza con el inventario y las cuentas por cobrar de corto plazo." onchange="editQuestionOption(1,1,3,this.value)" placeholder="Opción 4">
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuestionOption(1,1,3)" style="color:var(--accent)">✕</button>
+      </div><button class="btn btn-sm btn-ghost" onclick="addQuestionOption(1,1)">➕ Agregar opción</button></div>
+      </div><div class="qe-question" data-qi="2">
+        <div class="qe-meta">
+          <span class="points-tag">4 pts</span>
+          <select onchange="editQuestionType(1,2,this.value)">
+            <option value="mc">Opción múltiple</option>
+            <option value="calc" selected="">Cálculo</option>
+            <option value="open">Abierta</option>
+            <option value="match">Relacionar columnas</option>
+          </select>
+          <span class="muted">Puntos:</span>
+          <input type="number" class="pts-input" value="4" min="0" onchange="editQuestionPoints(1,2,this.value)">
+          <span style="margin-left:auto">
+            <button class="btn btn-sm btn-ghost" onclick="moveQuestion(1,2,-1)">⬆</button>
+            <button class="btn btn-sm btn-ghost" onclick="moveQuestion(1,2,1)">⬇</button>
+            <button class="btn btn-sm btn-ghost" onclick="deleteQuestion(1,2)" style="color:var(--accent);border-color:var(--accent)">🗑️</button>
+          </span>
+        </div>
+        <textarea style="min-height:60px;width:100%" onchange="editQuestionText(1,2,this.value)" placeholder="Enunciado de la pregunta">Una PyME contrata un crédito simple por $1,800,000 a 4 años con tasa fija del 18% anual y pagos MENSUALES nivelados (sistema francés). ¿Cuál es el monto APROXIMADO del pago mensual?</textarea>
+        <div class="qe-options"><p class="muted" style="font-size:12px;margin:4px 0">Marca la opción correcta con el círculo de la izquierda:</p><div class="qe-option">
+        <input type="radio" class="correct-radio" name="q-1-2-correct" onchange="editQuestionCorrect(1,2,0)">
+        <span style="font-weight:700;width:20px">a)</span>
+        <input type="text" value="$48,612" onchange="editQuestionOption(1,2,0,this.value)" placeholder="Opción 1">
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuestionOption(1,2,0)" style="color:var(--accent)">✕</button>
+      </div><div class="qe-option">
+        <input type="radio" class="correct-radio" name="q-1-2-correct" checked="" onchange="editQuestionCorrect(1,2,1)">
+        <span style="font-weight:700;width:20px">b)</span>
+        <input type="text" value="$52,876" onchange="editQuestionOption(1,2,1,this.value)" placeholder="Opción 2">
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuestionOption(1,2,1)" style="color:var(--accent)">✕</button>
+      </div><div class="qe-option">
+        <input type="radio" class="correct-radio" name="q-1-2-correct" onchange="editQuestionCorrect(1,2,2)">
+        <span style="font-weight:700;width:20px">c)</span>
+        <input type="text" value="$55,580" onchange="editQuestionOption(1,2,2,this.value)" placeholder="Opción 3">
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuestionOption(1,2,2)" style="color:var(--accent)">✕</button>
+      </div><div class="qe-option">
+        <input type="radio" class="correct-radio" name="q-1-2-correct" onchange="editQuestionCorrect(1,2,3)">
+        <span style="font-weight:700;width:20px">d)</span>
+        <input type="text" value="$60,150" onchange="editQuestionOption(1,2,3,this.value)" placeholder="Opción 4">
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuestionOption(1,2,3)" style="color:var(--accent)">✕</button>
+      </div><button class="btn btn-sm btn-ghost" onclick="addQuestionOption(1,2)">➕ Agregar opción</button></div>
+      </div><button class="btn btn-sm btn-primary" onclick="addQuestion(1)">➕ Agregar pregunta a esta sección</button>
+    </div><div class="qe-section" data-si="2">
+      <h3>
+        <span style="background:var(--primary);color:white;padding:4px 10px;border-radius:6px;font-size:14px">Sección III</span>
+        <input type="text" value="Banca múltiple vs. banca de desarrollo" onchange="editSectionName(2, this.value)" placeholder="Nombre de la sección">
+        <span class="muted">Peso:</span>
+        <input type="number" value="10" min="0" style="width:70px" onchange="editSectionWeight(2, this.value)">
+        <span class="muted">pts</span>
+        <button class="btn btn-sm btn-ghost" onclick="moveSection(2, -1)" title="Subir">⬆</button>
+        <button class="btn btn-sm btn-ghost" onclick="moveSection(2, 1)" title="Bajar">⬇</button>
+        <button class="btn btn-sm btn-ghost" onclick="deleteSection(2)" style="color:var(--accent);border-color:var(--accent)" title="Eliminar">🗑️</button>
+      </h3><div style="background:#fff8e1;border:1px solid #f0d986;border-radius:8px;padding:10px 14px;margin-bottom:14px">
+      <label style="display:flex;align-items:center;gap:10px;margin:0;font-weight:600;color:#7a5300">
+        🎮 Bonus de esta sección:
+        <select onchange="editSectionBonus(2, this.value)" style="font-size:13px;padding:4px 8px">
+          <option value="_default" selected="">🎲 Por defecto (rotación automática)</option><option value="none">🚫 Sin bonus en esta sección</option><option value="pong">🏓 Pong</option><option value="memory">💰 Memoria Financiera</option><option value="whack">🔨 Caza-Topos</option><option value="guitar">🎸 Ritmo Financiero (Guitar Hero)</option><option value="trivia">❓ Trivia (preguntas personalizadas)</option>
+        </select>
+      </label></div><div class="qe-question" data-qi="0">
+        <div class="qe-meta">
+          <span class="points-tag">3 pts</span>
+          <select onchange="editQuestionType(2,0,this.value)">
+            <option value="mc" selected="">Opción múltiple</option>
+            <option value="calc">Cálculo</option>
+            <option value="open">Abierta</option>
+            <option value="match">Relacionar columnas</option>
+          </select>
+          <span class="muted">Puntos:</span>
+          <input type="number" class="pts-input" value="3" min="0" onchange="editQuestionPoints(2,0,this.value)">
+          <span style="margin-left:auto">
+            <button class="btn btn-sm btn-ghost" onclick="moveQuestion(2,0,-1)">⬆</button>
+            <button class="btn btn-sm btn-ghost" onclick="moveQuestion(2,0,1)">⬇</button>
+            <button class="btn btn-sm btn-ghost" onclick="deleteQuestion(2,0)" style="color:var(--accent);border-color:var(--accent)">🗑️</button>
+          </span>
+        </div>
+        <textarea style="min-height:60px;width:100%" onchange="editQuestionText(2,0,this.value)" placeholder="Enunciado de la pregunta">Una empresa exportadora mexicana de autopartes busca un crédito de largo plazo en condiciones preferenciales para abrir un nuevo mercado en Asia. ¿A qué institución resulta más pertinente acudir como primera opción?</textarea>
+        <div class="qe-options"><p class="muted" style="font-size:12px;margin:4px 0">Marca la opción correcta con el círculo de la izquierda:</p><div class="qe-option">
+        <input type="radio" class="correct-radio" name="q-2-0-correct" onchange="editQuestionCorrect(2,0,0)">
+        <span style="font-weight:700;width:20px">a)</span>
+        <input type="text" value="Banco Santander México (banca múltiple)." onchange="editQuestionOption(2,0,0,this.value)" placeholder="Opción 1">
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuestionOption(2,0,0)" style="color:var(--accent)">✕</button>
+      </div><div class="qe-option">
+        <input type="radio" class="correct-radio" name="q-2-0-correct" checked="" onchange="editQuestionCorrect(2,0,1)">
+        <span style="font-weight:700;width:20px">b)</span>
+        <input type="text" value="Bancomext (banca de desarrollo orientada al comercio exterior)." onchange="editQuestionOption(2,0,1,this.value)" placeholder="Opción 2">
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuestionOption(2,0,1)" style="color:var(--accent)">✕</button>
+      </div><div class="qe-option">
+        <input type="radio" class="correct-radio" name="q-2-0-correct" onchange="editQuestionCorrect(2,0,2)">
+        <span style="font-weight:700;width:20px">c)</span>
+        <input type="text" value="Banco del Bienestar (banca social)." onchange="editQuestionOption(2,0,2,this.value)" placeholder="Opción 3">
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuestionOption(2,0,2)" style="color:var(--accent)">✕</button>
+      </div><div class="qe-option">
+        <input type="radio" class="correct-radio" name="q-2-0-correct" onchange="editQuestionCorrect(2,0,3)">
+        <span style="font-weight:700;width:20px">d)</span>
+        <input type="text" value="Una casa de bolsa privada." onchange="editQuestionOption(2,0,3,this.value)" placeholder="Opción 4">
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuestionOption(2,0,3)" style="color:var(--accent)">✕</button>
+      </div><button class="btn btn-sm btn-ghost" onclick="addQuestionOption(2,0)">➕ Agregar opción</button></div>
+      </div><div class="qe-question" data-qi="1">
+        <div class="qe-meta">
+          <span class="points-tag">3 pts</span>
+          <select onchange="editQuestionType(2,1,this.value)">
+            <option value="mc" selected="">Opción múltiple</option>
+            <option value="calc">Cálculo</option>
+            <option value="open">Abierta</option>
+            <option value="match">Relacionar columnas</option>
+          </select>
+          <span class="muted">Puntos:</span>
+          <input type="number" class="pts-input" value="3" min="0" onchange="editQuestionPoints(2,1,this.value)">
+          <span style="margin-left:auto">
+            <button class="btn btn-sm btn-ghost" onclick="moveQuestion(2,1,-1)">⬆</button>
+            <button class="btn btn-sm btn-ghost" onclick="moveQuestion(2,1,1)">⬇</button>
+            <button class="btn btn-sm btn-ghost" onclick="deleteQuestion(2,1)" style="color:var(--accent);border-color:var(--accent)">🗑️</button>
+          </span>
+        </div>
+        <textarea style="min-height:60px;width:100%" onchange="editQuestionText(2,1,this.value)" placeholder="Enunciado de la pregunta">¿Cuál de las siguientes afirmaciones describe MEJOR la diferencia esencial entre banca múltiple y banca de desarrollo?</textarea>
+        <div class="qe-options"><p class="muted" style="font-size:12px;margin:4px 0">Marca la opción correcta con el círculo de la izquierda:</p><div class="qe-option">
+        <input type="radio" class="correct-radio" name="q-2-1-correct" onchange="editQuestionCorrect(2,1,0)">
+        <span style="font-weight:700;width:20px">a)</span>
+        <input type="text" value="La banca de desarrollo es siempre privada y la banca múltiple es siempre pública." onchange="editQuestionOption(2,1,0,this.value)" placeholder="Opción 1">
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuestionOption(2,1,0)" style="color:var(--accent)">✕</button>
+      </div><div class="qe-option">
+        <input type="radio" class="correct-radio" name="q-2-1-correct" checked="" onchange="editQuestionCorrect(2,1,1)">
+        <span style="font-weight:700;width:20px">b)</span>
+        <input type="text" value="La banca múltiple opera con criterios estrictamente comerciales y de utilidad; la banca de desarrollo financia sectores prioritarios y suele ofrecer condiciones preferenciales." onchange="editQuestionOption(2,1,1,this.value)" placeholder="Opción 2">
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuestionOption(2,1,1)" style="color:var(--accent)">✕</button>
+      </div><div class="qe-option">
+        <input type="radio" class="correct-radio" name="q-2-1-correct" onchange="editQuestionCorrect(2,1,2)">
+        <span style="font-weight:700;width:20px">c)</span>
+        <input type="text" value="Sólo la banca múltiple puede otorgar créditos garantizados con activos fijos." onchange="editQuestionOption(2,1,2,this.value)" placeholder="Opción 3">
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuestionOption(2,1,2)" style="color:var(--accent)">✕</button>
+      </div><div class="qe-option">
+        <input type="radio" class="correct-radio" name="q-2-1-correct" onchange="editQuestionCorrect(2,1,3)">
+        <span style="font-weight:700;width:20px">d)</span>
+        <input type="text" value="La banca de desarrollo no está regulada por la CNBV." onchange="editQuestionOption(2,1,3,this.value)" placeholder="Opción 4">
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuestionOption(2,1,3)" style="color:var(--accent)">✕</button>
+      </div><button class="btn btn-sm btn-ghost" onclick="addQuestionOption(2,1)">➕ Agregar opción</button></div>
+      </div><div class="qe-question" data-qi="2">
+        <div class="qe-meta">
+          <span class="points-tag">4 pts</span>
+          <select onchange="editQuestionType(2,2,this.value)">
+            <option value="mc" selected="">Opción múltiple</option>
+            <option value="calc">Cálculo</option>
+            <option value="open">Abierta</option>
+            <option value="match">Relacionar columnas</option>
+          </select>
+          <span class="muted">Puntos:</span>
+          <input type="number" class="pts-input" value="4" min="0" onchange="editQuestionPoints(2,2,this.value)">
+          <span style="margin-left:auto">
+            <button class="btn btn-sm btn-ghost" onclick="moveQuestion(2,2,-1)">⬆</button>
+            <button class="btn btn-sm btn-ghost" onclick="moveQuestion(2,2,1)">⬇</button>
+            <button class="btn btn-sm btn-ghost" onclick="deleteQuestion(2,2)" style="color:var(--accent);border-color:var(--accent)">🗑️</button>
+          </span>
+        </div>
+        <textarea style="min-height:60px;width:100%" onchange="editQuestionText(2,2,this.value)" placeholder="Enunciado de la pregunta">Una constructora de vivienda de interés social necesita fondeo de largo plazo para un desarrollo habitacional. ¿Cuál es la combinación de instituciones MÁS coherente con su perfil?</textarea>
+        <div class="qe-options"><p class="muted" style="font-size:12px;margin:4px 0">Marca la opción correcta con el círculo de la izquierda:</p><div class="qe-option">
+        <input type="radio" class="correct-radio" name="q-2-2-correct" onchange="editQuestionCorrect(2,2,0)">
+        <span style="font-weight:700;width:20px">a)</span>
+        <input type="text" value="BBVA (banca múltiple) + Bolsa Institucional de Valores (BIVA)." onchange="editQuestionOption(2,2,0,this.value)" placeholder="Opción 1">
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuestionOption(2,2,0)" style="color:var(--accent)">✕</button>
+      </div><div class="qe-option">
+        <input type="radio" class="correct-radio" name="q-2-2-correct" checked="" onchange="editQuestionCorrect(2,2,1)">
+        <span style="font-weight:700;width:20px">b)</span>
+        <input type="text" value="Sociedad Hipotecaria Federal (banca de desarrollo) + banca múltiple para crédito puente." onchange="editQuestionOption(2,2,1,this.value)" placeholder="Opción 2">
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuestionOption(2,2,1)" style="color:var(--accent)">✕</button>
+      </div><div class="qe-option">
+        <input type="radio" class="correct-radio" name="q-2-2-correct" onchange="editQuestionCorrect(2,2,2)">
+        <span style="font-weight:700;width:20px">c)</span>
+        <input type="text" value="Banco del Bienestar + casa de empeño." onchange="editQuestionOption(2,2,2,this.value)" placeholder="Opción 3">
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuestionOption(2,2,2)" style="color:var(--accent)">✕</button>
+      </div><div class="qe-option">
+        <input type="radio" class="correct-radio" name="q-2-2-correct" onchange="editQuestionCorrect(2,2,3)">
+        <span style="font-weight:700;width:20px">d)</span>
+        <input type="text" value="Bancomext + fondos de capital privado internacional únicamente." onchange="editQuestionOption(2,2,3,this.value)" placeholder="Opción 4">
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuestionOption(2,2,3)" style="color:var(--accent)">✕</button>
+      </div><button class="btn btn-sm btn-ghost" onclick="addQuestionOption(2,2)">➕ Agregar opción</button></div>
+      </div><button class="btn btn-sm btn-primary" onclick="addQuestion(2)">➕ Agregar pregunta a esta sección</button>
+    </div><div class="qe-section" data-si="3">
+      <h3>
+        <span style="background:var(--primary);color:white;padding:4px 10px;border-radius:6px;font-size:14px">Sección IV</span>
+        <input type="text" value="Mercado de dinero" onchange="editSectionName(3, this.value)" placeholder="Nombre de la sección">
+        <span class="muted">Peso:</span>
+        <input type="number" value="15" min="0" style="width:70px" onchange="editSectionWeight(3, this.value)">
+        <span class="muted">pts</span>
+        <button class="btn btn-sm btn-ghost" onclick="moveSection(3, -1)" title="Subir">⬆</button>
+        <button class="btn btn-sm btn-ghost" onclick="moveSection(3, 1)" title="Bajar">⬇</button>
+        <button class="btn btn-sm btn-ghost" onclick="deleteSection(3)" style="color:var(--accent);border-color:var(--accent)" title="Eliminar">🗑️</button>
+      </h3><div style="background:#fff8e1;border:1px solid #f0d986;border-radius:8px;padding:10px 14px;margin-bottom:14px">
+      <label style="display:flex;align-items:center;gap:10px;margin:0;font-weight:600;color:#7a5300">
+        🎮 Bonus de esta sección:
+        <select onchange="editSectionBonus(3, this.value)" style="font-size:13px;padding:4px 8px">
+          <option value="_default">🎲 Por defecto (rotación automática)</option><option value="none">🚫 Sin bonus en esta sección</option><option value="pong">🏓 Pong</option><option value="memory">💰 Memoria Financiera</option><option value="whack">🔨 Caza-Topos</option><option value="guitar">🎸 Ritmo Financiero (Guitar Hero)</option><option value="trivia">❓ Trivia (preguntas personalizadas)</option>
+        </select>
+      </label></div><div class="qe-question" data-qi="0">
+        <div class="qe-meta">
+          <span class="points-tag">5 pts</span>
+          <select onchange="editQuestionType(3,0,this.value)">
+            <option value="mc" selected="">Opción múltiple</option>
+            <option value="calc">Cálculo</option>
+            <option value="open">Abierta</option>
+            <option value="match">Relacionar columnas</option>
+          </select>
+          <span class="muted">Puntos:</span>
+          <input type="number" class="pts-input" value="5" min="0" onchange="editQuestionPoints(3,0,this.value)">
+          <span style="margin-left:auto">
+            <button class="btn btn-sm btn-ghost" onclick="moveQuestion(3,0,-1)">⬆</button>
+            <button class="btn btn-sm btn-ghost" onclick="moveQuestion(3,0,1)">⬇</button>
+            <button class="btn btn-sm btn-ghost" onclick="deleteQuestion(3,0)" style="color:var(--accent);border-color:var(--accent)">🗑️</button>
+          </span>
+        </div>
+        <textarea style="min-height:60px;width:100%" onchange="editQuestionText(3,0,this.value)" placeholder="Enunciado de la pregunta">El mercado de dinero se caracteriza, frente al mercado de capitales, por…</textarea>
+        <div class="qe-options"><p class="muted" style="font-size:12px;margin:4px 0">Marca la opción correcta con el círculo de la izquierda:</p><div class="qe-option">
+        <input type="radio" class="correct-radio" name="q-3-0-correct" checked="" onchange="editQuestionCorrect(3,0,0)">
+        <span style="font-weight:700;width:20px">a)</span>
+        <input type="text" value="Operar con instrumentos de alta liquidez, bajo riesgo relativo y plazos generalmente menores o iguales a un año." onchange="editQuestionOption(3,0,0,this.value)" placeholder="Opción 1">
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuestionOption(3,0,0)" style="color:var(--accent)">✕</button>
+      </div><div class="qe-option">
+        <input type="radio" class="correct-radio" name="q-3-0-correct" onchange="editQuestionCorrect(3,0,1)">
+        <span style="font-weight:700;width:20px">b)</span>
+        <input type="text" value="Operar exclusivamente con acciones comunes y preferentes." onchange="editQuestionOption(3,0,1,this.value)" placeholder="Opción 2">
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuestionOption(3,0,1)" style="color:var(--accent)">✕</button>
+      </div><div class="qe-option">
+        <input type="radio" class="correct-radio" name="q-3-0-correct" onchange="editQuestionCorrect(3,0,2)">
+        <span style="font-weight:700;width:20px">c)</span>
+        <input type="text" value="No estar regulado por las autoridades financieras." onchange="editQuestionOption(3,0,2,this.value)" placeholder="Opción 3">
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuestionOption(3,0,2)" style="color:var(--accent)">✕</button>
+      </div><div class="qe-option">
+        <input type="radio" class="correct-radio" name="q-3-0-correct" onchange="editQuestionCorrect(3,0,3)">
+        <span style="font-weight:700;width:20px">d)</span>
+        <input type="text" value="Negociar instrumentos cuyo plazo mínimo es de 5 años." onchange="editQuestionOption(3,0,3,this.value)" placeholder="Opción 4">
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuestionOption(3,0,3)" style="color:var(--accent)">✕</button>
+      </div><button class="btn btn-sm btn-ghost" onclick="addQuestionOption(3,0)">➕ Agregar opción</button></div>
+      </div><div class="qe-question" data-qi="1">
+        <div class="qe-meta">
+          <span class="points-tag">5 pts</span>
+          <select onchange="editQuestionType(3,1,this.value)">
+            <option value="mc" selected="">Opción múltiple</option>
+            <option value="calc">Cálculo</option>
+            <option value="open">Abierta</option>
+            <option value="match">Relacionar columnas</option>
+          </select>
+          <span class="muted">Puntos:</span>
+          <input type="number" class="pts-input" value="5" min="0" onchange="editQuestionPoints(3,1,this.value)">
+          <span style="margin-left:auto">
+            <button class="btn btn-sm btn-ghost" onclick="moveQuestion(3,1,-1)">⬆</button>
+            <button class="btn btn-sm btn-ghost" onclick="moveQuestion(3,1,1)">⬇</button>
+            <button class="btn btn-sm btn-ghost" onclick="deleteQuestion(3,1)" style="color:var(--accent);border-color:var(--accent)">🗑️</button>
+          </span>
+        </div>
+        <textarea style="min-height:60px;width:100%" onchange="editQuestionText(3,1,this.value)" placeholder="Enunciado de la pregunta">¿Cuál de los siguientes instrumentos NO es propio del mercado de dinero mexicano?</textarea>
+        <div class="qe-options"><p class="muted" style="font-size:12px;margin:4px 0">Marca la opción correcta con el círculo de la izquierda:</p><div class="qe-option">
+        <input type="radio" class="correct-radio" name="q-3-1-correct" onchange="editQuestionCorrect(3,1,0)">
+        <span style="font-weight:700;width:20px">a)</span>
+        <input type="text" value="CETES (Certificados de la Tesorería)." onchange="editQuestionOption(3,1,0,this.value)" placeholder="Opción 1">
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuestionOption(3,1,0)" style="color:var(--accent)">✕</button>
+      </div><div class="qe-option">
+        <input type="radio" class="correct-radio" name="q-3-1-correct" onchange="editQuestionCorrect(3,1,1)">
+        <span style="font-weight:700;width:20px">b)</span>
+        <input type="text" value="Pagaré con rendimiento liquidable al vencimiento (PRLV)." onchange="editQuestionOption(3,1,1,this.value)" placeholder="Opción 2">
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuestionOption(3,1,1)" style="color:var(--accent)">✕</button>
+      </div><div class="qe-option">
+        <input type="radio" class="correct-radio" name="q-3-1-correct" checked="" onchange="editQuestionCorrect(3,1,2)">
+        <span style="font-weight:700;width:20px">c)</span>
+        <input type="text" value="Acciones serie 'B' de una emisora del IPC." onchange="editQuestionOption(3,1,2,this.value)" placeholder="Opción 3">
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuestionOption(3,1,2)" style="color:var(--accent)">✕</button>
+      </div><div class="qe-option">
+        <input type="radio" class="correct-radio" name="q-3-1-correct" onchange="editQuestionCorrect(3,1,3)">
+        <span style="font-weight:700;width:20px">d)</span>
+        <input type="text" value="Aceptaciones bancarias." onchange="editQuestionOption(3,1,3,this.value)" placeholder="Opción 4">
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuestionOption(3,1,3)" style="color:var(--accent)">✕</button>
+      </div><button class="btn btn-sm btn-ghost" onclick="addQuestionOption(3,1)">➕ Agregar opción</button></div>
+      </div><div class="qe-question" data-qi="2">
+        <div class="qe-meta">
+          <span class="points-tag">5 pts</span>
+          <select onchange="editQuestionType(3,2,this.value)">
+            <option value="mc">Opción múltiple</option>
+            <option value="calc" selected="">Cálculo</option>
+            <option value="open">Abierta</option>
+            <option value="match">Relacionar columnas</option>
+          </select>
+          <span class="muted">Puntos:</span>
+          <input type="number" class="pts-input" value="5" min="0" onchange="editQuestionPoints(3,2,this.value)">
+          <span style="margin-left:auto">
+            <button class="btn btn-sm btn-ghost" onclick="moveQuestion(3,2,-1)">⬆</button>
+            <button class="btn btn-sm btn-ghost" onclick="moveQuestion(3,2,1)">⬇</button>
+            <button class="btn btn-sm btn-ghost" onclick="deleteQuestion(3,2)" style="color:var(--accent);border-color:var(--accent)">🗑️</button>
+          </span>
+        </div>
+        <textarea style="min-height:60px;width:100%" onchange="editQuestionText(3,2,this.value)" placeholder="Enunciado de la pregunta">Un CETE a 91 días se subasta con valor nominal de $10.00 y tasa de descuento anualizada del 10.80% (base 360 días). ¿Cuál es el precio aproximado de adjudicación?</textarea>
+        <div class="qe-options"><p class="muted" style="font-size:12px;margin:4px 0">Marca la opción correcta con el círculo de la izquierda:</p><div class="qe-option">
+        <input type="radio" class="correct-radio" name="q-3-2-correct" checked="" onchange="editQuestionCorrect(3,2,0)">
+        <span style="font-weight:700;width:20px">a)</span>
+        <input type="text" value="$9.7270" onchange="editQuestionOption(3,2,0,this.value)" placeholder="Opción 1">
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuestionOption(3,2,0)" style="color:var(--accent)">✕</button>
+      </div><div class="qe-option">
+        <input type="radio" class="correct-radio" name="q-3-2-correct" onchange="editQuestionCorrect(3,2,1)">
+        <span style="font-weight:700;width:20px">b)</span>
+        <input type="text" value="$9.7900" onchange="editQuestionOption(3,2,1,this.value)" placeholder="Opción 2">
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuestionOption(3,2,1)" style="color:var(--accent)">✕</button>
+      </div><div class="qe-option">
+        <input type="radio" class="correct-radio" name="q-3-2-correct" onchange="editQuestionCorrect(3,2,2)">
+        <span style="font-weight:700;width:20px">c)</span>
+        <input type="text" value="$9.8920" onchange="editQuestionOption(3,2,2,this.value)" placeholder="Opción 3">
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuestionOption(3,2,2)" style="color:var(--accent)">✕</button>
+      </div><div class="qe-option">
+        <input type="radio" class="correct-radio" name="q-3-2-correct" onchange="editQuestionCorrect(3,2,3)">
+        <span style="font-weight:700;width:20px">d)</span>
+        <input type="text" value="$9.9340" onchange="editQuestionOption(3,2,3,this.value)" placeholder="Opción 4">
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuestionOption(3,2,3)" style="color:var(--accent)">✕</button>
+      </div><button class="btn btn-sm btn-ghost" onclick="addQuestionOption(3,2)">➕ Agregar opción</button></div>
+      </div><button class="btn btn-sm btn-primary" onclick="addQuestion(3)">➕ Agregar pregunta a esta sección</button>
+    </div><div class="qe-section" data-si="4">
+      <h3>
+        <span style="background:var(--primary);color:white;padding:4px 10px;border-radius:6px;font-size:14px">Sección V</span>
+        <input type="text" value="Bonos con cupón y sin cupón" onchange="editSectionName(4, this.value)" placeholder="Nombre de la sección">
+        <span class="muted">Peso:</span>
+        <input type="number" value="15" min="0" style="width:70px" onchange="editSectionWeight(4, this.value)">
+        <span class="muted">pts</span>
+        <button class="btn btn-sm btn-ghost" onclick="moveSection(4, -1)" title="Subir">⬆</button>
+        <button class="btn btn-sm btn-ghost" onclick="moveSection(4, 1)" title="Bajar">⬇</button>
+        <button class="btn btn-sm btn-ghost" onclick="deleteSection(4)" style="color:var(--accent);border-color:var(--accent)" title="Eliminar">🗑️</button>
+      </h3><div style="background:#fff8e1;border:1px solid #f0d986;border-radius:8px;padding:10px 14px;margin-bottom:14px">
+      <label style="display:flex;align-items:center;gap:10px;margin:0;font-weight:600;color:#7a5300">
+        🎮 Bonus de esta sección:
+        <select onchange="editSectionBonus(4, this.value)" style="font-size:13px;padding:4px 8px">
+          <option value="_default">🎲 Por defecto (rotación automática)</option><option value="none">🚫 Sin bonus en esta sección</option><option value="pong">🏓 Pong</option><option value="memory">💰 Memoria Financiera</option><option value="whack">🔨 Caza-Topos</option><option value="guitar">🎸 Ritmo Financiero (Guitar Hero)</option><option value="trivia" selected="">❓ Trivia (preguntas personalizadas)</option>
+        </select>
+      </label><div style="margin-top:10px;padding-top:10px;border-top:1px solid #f0d986">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px">
+          <span style="font-size:12px;color:#7a5300">Mínimo correctas para ganar:</span>
+          <input type="number" value="3" min="1" max="4" style="width:70px" onchange="editTriviaRequired(4, this.value)">
+          <span style="font-size:12px;color:#7a5300">de 4 preguntas</span>
+        </div><div style="background:white;border:1px solid #d8dfe9;padding:8px 10px;border-radius:6px;margin-bottom:6px">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+            <span style="background:#7a5300;color:white;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:700">P1</span>
+            <textarea style="flex:1;min-height:40px;font-size:13px" onchange="editTriviaText(4, 0, this.value)" placeholder="Enunciado de la pregunta">¿Qué es un bono cupón cero?</textarea>
+            <button class="btn btn-sm btn-ghost" onclick="deleteTriviaQ(4, 0)" style="color:var(--accent);border-color:var(--accent)" title="Eliminar pregunta">🗑️</button>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px"><label style="display:flex;align-items:center;gap:6px;font-size:13px">
+            <input type="radio" name="triviaCorrect_4_0" checked="" onchange="editTriviaCorrect(4, 0, 0)" title="Marcar como correcta">
+            <span style="font-weight:700;color:#1e7e34;width:18px">a)</span>
+            <input type="text" value="Un bono que no paga intereses periódicos y se vende a descuento" style="flex:1;font-size:13px" onchange="editTriviaOption(4, 0, 0, this.value)" placeholder="Opción a">
+          </label><label style="display:flex;align-items:center;gap:6px;font-size:13px">
+            <input type="radio" name="triviaCorrect_4_0" onchange="editTriviaCorrect(4, 0, 1)" title="Marcar como correcta">
+            <span style="font-weight:700;color:#5b6470;width:18px">b)</span>
+            <input type="text" value="Un bono con tasa fija anual" style="flex:1;font-size:13px" onchange="editTriviaOption(4, 0, 1, this.value)" placeholder="Opción b">
+          </label><label style="display:flex;align-items:center;gap:6px;font-size:13px">
+            <input type="radio" name="triviaCorrect_4_0" onchange="editTriviaCorrect(4, 0, 2)" title="Marcar como correcta">
+            <span style="font-weight:700;color:#5b6470;width:18px">c)</span>
+            <input type="text" value="Un bono que paga cupones cada mes" style="flex:1;font-size:13px" onchange="editTriviaOption(4, 0, 2, this.value)" placeholder="Opción c">
+          </label><label style="display:flex;align-items:center;gap:6px;font-size:13px">
+            <input type="radio" name="triviaCorrect_4_0" onchange="editTriviaCorrect(4, 0, 3)" title="Marcar como correcta">
+            <span style="font-weight:700;color:#5b6470;width:18px">d)</span>
+            <input type="text" value="Un bono sin valor nominal" style="flex:1;font-size:13px" onchange="editTriviaOption(4, 0, 3, this.value)" placeholder="Opción d">
+          </label></div></div><div style="background:white;border:1px solid #d8dfe9;padding:8px 10px;border-radius:6px;margin-bottom:6px">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+            <span style="background:#7a5300;color:white;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:700">P2</span>
+            <textarea style="flex:1;min-height:40px;font-size:13px" onchange="editTriviaText(4, 1, this.value)" placeholder="Enunciado de la pregunta">¿Qué relación hay entre el precio de un bono y su tasa de mercado?</textarea>
+            <button class="btn btn-sm btn-ghost" onclick="deleteTriviaQ(4, 1)" style="color:var(--accent);border-color:var(--accent)" title="Eliminar pregunta">🗑️</button>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px"><label style="display:flex;align-items:center;gap:6px;font-size:13px">
+            <input type="radio" name="triviaCorrect_4_1" onchange="editTriviaCorrect(4, 1, 0)" title="Marcar como correcta">
+            <span style="font-weight:700;color:#5b6470;width:18px">a)</span>
+            <input type="text" value="Directa: si sube la tasa, sube el precio" style="flex:1;font-size:13px" onchange="editTriviaOption(4, 1, 0, this.value)" placeholder="Opción a">
+          </label><label style="display:flex;align-items:center;gap:6px;font-size:13px">
+            <input type="radio" name="triviaCorrect_4_1" checked="" onchange="editTriviaCorrect(4, 1, 1)" title="Marcar como correcta">
+            <span style="font-weight:700;color:#1e7e34;width:18px">b)</span>
+            <input type="text" value="Inversa: si sube la tasa, baja el precio" style="flex:1;font-size:13px" onchange="editTriviaOption(4, 1, 1, this.value)" placeholder="Opción b">
+          </label><label style="display:flex;align-items:center;gap:6px;font-size:13px">
+            <input type="radio" name="triviaCorrect_4_1" onchange="editTriviaCorrect(4, 1, 2)" title="Marcar como correcta">
+            <span style="font-weight:700;color:#5b6470;width:18px">c)</span>
+            <input type="text" value="No hay relación" style="flex:1;font-size:13px" onchange="editTriviaOption(4, 1, 2, this.value)" placeholder="Opción c">
+          </label><label style="display:flex;align-items:center;gap:6px;font-size:13px">
+            <input type="radio" name="triviaCorrect_4_1" onchange="editTriviaCorrect(4, 1, 3)" title="Marcar como correcta">
+            <span style="font-weight:700;color:#5b6470;width:18px">d)</span>
+            <input type="text" value="Sólo aplica a bonos cupón cero" style="flex:1;font-size:13px" onchange="editTriviaOption(4, 1, 3, this.value)" placeholder="Opción d">
+          </label></div></div><div style="background:white;border:1px solid #d8dfe9;padding:8px 10px;border-radius:6px;margin-bottom:6px">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+            <span style="background:#7a5300;color:white;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:700">P3</span>
+            <textarea style="flex:1;min-height:40px;font-size:13px" onchange="editTriviaText(4, 2, this.value)" placeholder="Enunciado de la pregunta">¿Qué es la TIR (Tasa Interna de Retorno) de un bono?</textarea>
+            <button class="btn btn-sm btn-ghost" onclick="deleteTriviaQ(4, 2)" style="color:var(--accent);border-color:var(--accent)" title="Eliminar pregunta">🗑️</button>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px"><label style="display:flex;align-items:center;gap:6px;font-size:13px">
+            <input type="radio" name="triviaCorrect_4_2" onchange="editTriviaCorrect(4, 2, 0)" title="Marcar como correcta">
+            <span style="font-weight:700;color:#5b6470;width:18px">a)</span>
+            <input type="text" value="El cupón anual" style="flex:1;font-size:13px" onchange="editTriviaOption(4, 2, 0, this.value)" placeholder="Opción a">
+          </label><label style="display:flex;align-items:center;gap:6px;font-size:13px">
+            <input type="radio" name="triviaCorrect_4_2" onchange="editTriviaCorrect(4, 2, 1)" title="Marcar como correcta">
+            <span style="font-weight:700;color:#5b6470;width:18px">b)</span>
+            <input type="text" value="El rendimiento exigido en el mercado" style="flex:1;font-size:13px" onchange="editTriviaOption(4, 2, 1, this.value)" placeholder="Opción b">
+          </label><label style="display:flex;align-items:center;gap:6px;font-size:13px">
+            <input type="radio" name="triviaCorrect_4_2" checked="" onchange="editTriviaCorrect(4, 2, 2)" title="Marcar como correcta">
+            <span style="font-weight:700;color:#1e7e34;width:18px">c)</span>
+            <input type="text" value="La tasa que iguala el VP de los flujos al precio del bono" style="flex:1;font-size:13px" onchange="editTriviaOption(4, 2, 2, this.value)" placeholder="Opción c">
+          </label><label style="display:flex;align-items:center;gap:6px;font-size:13px">
+            <input type="radio" name="triviaCorrect_4_2" onchange="editTriviaCorrect(4, 2, 3)" title="Marcar como correcta">
+            <span style="font-weight:700;color:#5b6470;width:18px">d)</span>
+            <input type="text" value="La tasa libre de riesgo" style="flex:1;font-size:13px" onchange="editTriviaOption(4, 2, 3, this.value)" placeholder="Opción d">
+          </label></div></div><div style="background:white;border:1px solid #d8dfe9;padding:8px 10px;border-radius:6px;margin-bottom:6px">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+            <span style="background:#7a5300;color:white;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:700">P4</span>
+            <textarea style="flex:1;min-height:40px;font-size:13px" onchange="editTriviaText(4, 3, this.value)" placeholder="Enunciado de la pregunta">Si un bono se vende sobre la par significa que…</textarea>
+            <button class="btn btn-sm btn-ghost" onclick="deleteTriviaQ(4, 3)" style="color:var(--accent);border-color:var(--accent)" title="Eliminar pregunta">🗑️</button>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px"><label style="display:flex;align-items:center;gap:6px;font-size:13px">
+            <input type="radio" name="triviaCorrect_4_3" checked="" onchange="editTriviaCorrect(4, 3, 0)" title="Marcar como correcta">
+            <span style="font-weight:700;color:#1e7e34;width:18px">a)</span>
+            <input type="text" value="Su precio es mayor a su valor nominal" style="flex:1;font-size:13px" onchange="editTriviaOption(4, 3, 0, this.value)" placeholder="Opción a">
+          </label><label style="display:flex;align-items:center;gap:6px;font-size:13px">
+            <input type="radio" name="triviaCorrect_4_3" onchange="editTriviaCorrect(4, 3, 1)" title="Marcar como correcta">
+            <span style="font-weight:700;color:#5b6470;width:18px">b)</span>
+            <input type="text" value="Su precio es menor a su valor nominal" style="flex:1;font-size:13px" onchange="editTriviaOption(4, 3, 1, this.value)" placeholder="Opción b">
+          </label><label style="display:flex;align-items:center;gap:6px;font-size:13px">
+            <input type="radio" name="triviaCorrect_4_3" onchange="editTriviaCorrect(4, 3, 2)" title="Marcar como correcta">
+            <span style="font-weight:700;color:#5b6470;width:18px">c)</span>
+            <input type="text" value="No paga cupón" style="flex:1;font-size:13px" onchange="editTriviaOption(4, 3, 2, this.value)" placeholder="Opción c">
+          </label><label style="display:flex;align-items:center;gap:6px;font-size:13px">
+            <input type="radio" name="triviaCorrect_4_3" onchange="editTriviaCorrect(4, 3, 3)" title="Marcar como correcta">
+            <span style="font-weight:700;color:#5b6470;width:18px">d)</span>
+            <input type="text" value="Cotiza en moneda extranjera" style="flex:1;font-size:13px" onchange="editTriviaOption(4, 3, 3, this.value)" placeholder="Opción d">
+          </label></div></div><button class="btn btn-sm btn-primary" onclick="addTriviaQ(4)">➕ Agregar pregunta de trivia</button>
+        <p class="muted" style="font-size:11px;margin-top:6px">Las preguntas de trivia son INDEPENDIENTES del examen. Sólo se usan para el bonus.</p>
+      </div></div><div class="qe-question" data-qi="0">
+        <div class="qe-meta">
+          <span class="points-tag">5 pts</span>
+          <select onchange="editQuestionType(4,0,this.value)">
+            <option value="mc" selected="">Opción múltiple</option>
+            <option value="calc">Cálculo</option>
+            <option value="open">Abierta</option>
+            <option value="match">Relacionar columnas</option>
+          </select>
+          <span class="muted">Puntos:</span>
+          <input type="number" class="pts-input" value="5" min="0" onchange="editQuestionPoints(4,0,this.value)">
+          <span style="margin-left:auto">
+            <button class="btn btn-sm btn-ghost" onclick="moveQuestion(4,0,-1)">⬆</button>
+            <button class="btn btn-sm btn-ghost" onclick="moveQuestion(4,0,1)">⬇</button>
+            <button class="btn btn-sm btn-ghost" onclick="deleteQuestion(4,0)" style="color:var(--accent);border-color:var(--accent)">🗑️</button>
+          </span>
+        </div>
+        <textarea style="min-height:60px;width:100%" onchange="editQuestionText(4,0,this.value)" placeholder="Enunciado de la pregunta">Un bono CUPÓN CERO se distingue de uno con cupón porque…</textarea>
+        <div class="qe-options"><p class="muted" style="font-size:12px;margin:4px 0">Marca la opción correcta con el círculo de la izquierda:</p><div class="qe-option">
+        <input type="radio" class="correct-radio" name="q-4-0-correct" onchange="editQuestionCorrect(4,0,0)">
+        <span style="font-weight:700;width:20px">a)</span>
+        <input type="text" value="Paga cupones trimestralmente y devuelve el principal al final." onchange="editQuestionOption(4,0,0,this.value)" placeholder="Opción 1">
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuestionOption(4,0,0)" style="color:var(--accent)">✕</button>
+      </div><div class="qe-option">
+        <input type="radio" class="correct-radio" name="q-4-0-correct" checked="" onchange="editQuestionCorrect(4,0,1)">
+        <span style="font-weight:700;width:20px">b)</span>
+        <input type="text" value="No realiza pagos periódicos: el rendimiento del inversionista proviene del descuento entre el precio de compra y el valor nominal recibido al vencimiento." onchange="editQuestionOption(4,0,1,this.value)" placeholder="Opción 2">
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuestionOption(4,0,1)" style="color:var(--accent)">✕</button>
+      </div><div class="qe-option">
+        <input type="radio" class="correct-radio" name="q-4-0-correct" onchange="editQuestionCorrect(4,0,2)">
+        <span style="font-weight:700;width:20px">c)</span>
+        <input type="text" value="Tiene tasa cupón variable referenciada a TIIE." onchange="editQuestionOption(4,0,2,this.value)" placeholder="Opción 3">
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuestionOption(4,0,2)" style="color:var(--accent)">✕</button>
+      </div><div class="qe-option">
+        <input type="radio" class="correct-radio" name="q-4-0-correct" onchange="editQuestionCorrect(4,0,3)">
+        <span style="font-weight:700;width:20px">d)</span>
+        <input type="text" value="Está libre de riesgo de tasa de interés." onchange="editQuestionOption(4,0,3,this.value)" placeholder="Opción 4">
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuestionOption(4,0,3)" style="color:var(--accent)">✕</button>
+      </div><button class="btn btn-sm btn-ghost" onclick="addQuestionOption(4,0)">➕ Agregar opción</button></div>
+      </div><div class="qe-question" data-qi="1">
+        <div class="qe-meta">
+          <span class="points-tag">5 pts</span>
+          <select onchange="editQuestionType(4,1,this.value)">
+            <option value="mc" selected="">Opción múltiple</option>
+            <option value="calc">Cálculo</option>
+            <option value="open">Abierta</option>
+            <option value="match">Relacionar columnas</option>
+          </select>
+          <span class="muted">Puntos:</span>
+          <input type="number" class="pts-input" value="5" min="0" onchange="editQuestionPoints(4,1,this.value)">
+          <span style="margin-left:auto">
+            <button class="btn btn-sm btn-ghost" onclick="moveQuestion(4,1,-1)">⬆</button>
+            <button class="btn btn-sm btn-ghost" onclick="moveQuestion(4,1,1)">⬇</button>
+            <button class="btn btn-sm btn-ghost" onclick="deleteQuestion(4,1)" style="color:var(--accent);border-color:var(--accent)">🗑️</button>
+          </span>
+        </div>
+        <textarea style="min-height:60px;width:100%" onchange="editQuestionText(4,1,this.value)" placeholder="Enunciado de la pregunta">Una emisora colocó hace 12 meses un bono a 5 años con tasa cupón fija del 9% anual y valor nominal de $1,000. Hoy las tasas de mercado para emisoras comparables son del 12%. ¿Qué se espera del precio del bono y del rendimiento al vencimiento (yield) en el mercado secundario?</textarea>
+        <div class="qe-options"><p class="muted" style="font-size:12px;margin:4px 0">Marca la opción correcta con el círculo de la izquierda:</p><div class="qe-option">
+        <input type="radio" class="correct-radio" name="q-4-1-correct" onchange="editQuestionCorrect(4,1,0)">
+        <span style="font-weight:700;width:20px">a)</span>
+        <input type="text" value="El precio sube por encima del nominal y el yield baja." onchange="editQuestionOption(4,1,0,this.value)" placeholder="Opción 1">
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuestionOption(4,1,0)" style="color:var(--accent)">✕</button>
+      </div><div class="qe-option">
+        <input type="radio" class="correct-radio" name="q-4-1-correct" onchange="editQuestionCorrect(4,1,1)">
+        <span style="font-weight:700;width:20px">b)</span>
+        <input type="text" value="El precio se mantiene en valor nominal porque la tasa cupón es fija." onchange="editQuestionOption(4,1,1,this.value)" placeholder="Opción 2">
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuestionOption(4,1,1)" style="color:var(--accent)">✕</button>
+      </div><div class="qe-option">
+        <input type="radio" class="correct-radio" name="q-4-1-correct" checked="" onchange="editQuestionCorrect(4,1,2)">
+        <span style="font-weight:700;width:20px">c)</span>
+        <input type="text" value="El precio cae por debajo del nominal y el yield se eleva hacia 12%." onchange="editQuestionOption(4,1,2,this.value)" placeholder="Opción 3">
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuestionOption(4,1,2)" style="color:var(--accent)">✕</button>
+      </div><div class="qe-option">
+        <input type="radio" class="correct-radio" name="q-4-1-correct" onchange="editQuestionCorrect(4,1,3)">
+        <span style="font-weight:700;width:20px">d)</span>
+        <input type="text" value="El precio sube y el yield sube simultáneamente." onchange="editQuestionOption(4,1,3,this.value)" placeholder="Opción 4">
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuestionOption(4,1,3)" style="color:var(--accent)">✕</button>
+      </div><button class="btn btn-sm btn-ghost" onclick="addQuestionOption(4,1)">➕ Agregar opción</button></div>
+      </div><div class="qe-question" data-qi="2">
+        <div class="qe-meta">
+          <span class="points-tag">5 pts</span>
+          <select onchange="editQuestionType(4,2,this.value)">
+            <option value="mc">Opción múltiple</option>
+            <option value="calc" selected="">Cálculo</option>
+            <option value="open">Abierta</option>
+            <option value="match">Relacionar columnas</option>
+          </select>
+          <span class="muted">Puntos:</span>
+          <input type="number" class="pts-input" value="5" min="0" onchange="editQuestionPoints(4,2,this.value)">
+          <span style="margin-left:auto">
+            <button class="btn btn-sm btn-ghost" onclick="moveQuestion(4,2,-1)">⬆</button>
+            <button class="btn btn-sm btn-ghost" onclick="moveQuestion(4,2,1)">⬇</button>
+            <button class="btn btn-sm btn-ghost" onclick="deleteQuestion(4,2)" style="color:var(--accent);border-color:var(--accent)">🗑️</button>
+          </span>
+        </div>
+        <textarea style="min-height:60px;width:100%" onchange="editQuestionText(4,2,this.value)" placeholder="Enunciado de la pregunta">Una empresa emite un bono CUPÓN CERO con valor nominal de $1,000 a un plazo de 4 años. El rendimiento exigido por el mercado es del 11% anual con capitalización ANUAL. ¿Cuál es el precio teórico de emisión?</textarea>
+        <div class="qe-options"><p class="muted" style="font-size:12px;margin:4px 0">Marca la opción correcta con el círculo de la izquierda:</p><div class="qe-option">
+        <input type="radio" class="correct-radio" name="q-4-2-correct" onchange="editQuestionCorrect(4,2,0)">
+        <span style="font-weight:700;width:20px">a)</span>
+        <input type="text" value="$610.50" onchange="editQuestionOption(4,2,0,this.value)" placeholder="Opción 1">
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuestionOption(4,2,0)" style="color:var(--accent)">✕</button>
+      </div><div class="qe-option">
+        <input type="radio" class="correct-radio" name="q-4-2-correct" onchange="editQuestionCorrect(4,2,1)">
+        <span style="font-weight:700;width:20px">b)</span>
+        <input type="text" value="$640.16" onchange="editQuestionOption(4,2,1,this.value)" placeholder="Opción 2">
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuestionOption(4,2,1)" style="color:var(--accent)">✕</button>
+      </div><div class="qe-option">
+        <input type="radio" class="correct-radio" name="q-4-2-correct" checked="" onchange="editQuestionCorrect(4,2,2)">
+        <span style="font-weight:700;width:20px">c)</span>
+        <input type="text" value="$658.73" onchange="editQuestionOption(4,2,2,this.value)" placeholder="Opción 3">
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuestionOption(4,2,2)" style="color:var(--accent)">✕</button>
+      </div><div class="qe-option">
+        <input type="radio" class="correct-radio" name="q-4-2-correct" onchange="editQuestionCorrect(4,2,3)">
+        <span style="font-weight:700;width:20px">d)</span>
+        <input type="text" value="$734.66" onchange="editQuestionOption(4,2,3,this.value)" placeholder="Opción 4">
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuestionOption(4,2,3)" style="color:var(--accent)">✕</button>
+      </div><button class="btn btn-sm btn-ghost" onclick="addQuestionOption(4,2)">➕ Agregar opción</button></div>
+      </div><button class="btn btn-sm btn-primary" onclick="addQuestion(4)">➕ Agregar pregunta a esta sección</button>
+    </div><div class="qe-section" data-si="5">
+      <h3>
+        <span style="background:var(--primary);color:white;padding:4px 10px;border-radius:6px;font-size:14px">Sección VI</span>
+        <input type="text" value="Relación de columnas (arrastrar)" onchange="editSectionName(5, this.value)" placeholder="Nombre de la sección">
+        <span class="muted">Peso:</span>
+        <input type="number" value="10" min="0" style="width:70px" onchange="editSectionWeight(5, this.value)">
+        <span class="muted">pts</span>
+        <button class="btn btn-sm btn-ghost" onclick="moveSection(5, -1)" title="Subir">⬆</button>
+        <button class="btn btn-sm btn-ghost" onclick="moveSection(5, 1)" title="Bajar">⬇</button>
+        <button class="btn btn-sm btn-ghost" onclick="deleteSection(5)" style="color:var(--accent);border-color:var(--accent)" title="Eliminar">🗑️</button>
+      </h3><div style="background:#fff8e1;border:1px solid #f0d986;border-radius:8px;padding:10px 14px;margin-bottom:14px">
+      <label style="display:flex;align-items:center;gap:10px;margin:0;font-weight:600;color:#7a5300">
+        🎮 Bonus de esta sección:
+        <select onchange="editSectionBonus(5, this.value)" style="font-size:13px;padding:4px 8px">
+          <option value="_default" selected="">🎲 Por defecto (rotación automática)</option><option value="none">🚫 Sin bonus en esta sección</option><option value="pong">🏓 Pong</option><option value="memory">💰 Memoria Financiera</option><option value="whack">🔨 Caza-Topos</option><option value="guitar">🎸 Ritmo Financiero (Guitar Hero)</option><option value="trivia">❓ Trivia (preguntas personalizadas)</option>
+        </select>
+      </label></div><div class="qe-question" data-qi="0">
+        <div class="qe-meta">
+          <span class="points-tag">5 pts</span>
+          <select onchange="editQuestionType(5,0,this.value)">
+            <option value="mc">Opción múltiple</option>
+            <option value="calc">Cálculo</option>
+            <option value="open">Abierta</option>
+            <option value="match" selected="">Relacionar columnas</option>
+          </select>
+          <span class="muted">Puntos:</span>
+          <input type="number" class="pts-input" value="5" min="0" onchange="editQuestionPoints(5,0,this.value)">
+          <span style="margin-left:auto">
+            <button class="btn btn-sm btn-ghost" onclick="moveQuestion(5,0,-1)">⬆</button>
+            <button class="btn btn-sm btn-ghost" onclick="moveQuestion(5,0,1)">⬇</button>
+            <button class="btn btn-sm btn-ghost" onclick="deleteQuestion(5,0)" style="color:var(--accent);border-color:var(--accent)">🗑️</button>
+          </span>
+        </div>
+        <textarea style="min-height:60px;width:100%" onchange="editQuestionText(5,0,this.value)" placeholder="Enunciado de la pregunta">Relaciona cada instrumento financiero con el mercado al que pertenece. Arrastra los recuadros de la derecha al cuadro correspondiente.</textarea>
+        <p class="muted" style="font-size:12px;margin:6px 0">Define los pares correctos. El alumno arrastrará los elementos de la columna B hacia la columna A.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div>
+        <b style="font-size:13px">Columna A (fija)</b>
+        
+          <div style="display:flex;gap:6px;margin-top:6px">
+            <input type="text" value="CETES" placeholder="Elemento 1" onchange="editMatchLeft(5,0,0,this.value)">
+            <button class="btn btn-sm btn-ghost" onclick="deleteMatchPair(5,0,0)" style="color:var(--accent)">✕</button>
+          </div>
+          <div style="display:flex;gap:6px;margin-top:6px">
+            <input type="text" value="Acciones serie B" placeholder="Elemento 2" onchange="editMatchLeft(5,0,1,this.value)">
+            <button class="btn btn-sm btn-ghost" onclick="deleteMatchPair(5,0,1)" style="color:var(--accent)">✕</button>
+          </div>
+          <div style="display:flex;gap:6px;margin-top:6px">
+            <input type="text" value="Bono cupón cero a 4 años" placeholder="Elemento 3" onchange="editMatchLeft(5,0,2,this.value)">
+            <button class="btn btn-sm btn-ghost" onclick="deleteMatchPair(5,0,2)" style="color:var(--accent)">✕</button>
+          </div>
+          <div style="display:flex;gap:6px;margin-top:6px">
+            <input type="text" value="Aceptación bancaria" placeholder="Elemento 4" onchange="editMatchLeft(5,0,3,this.value)">
+            <button class="btn btn-sm btn-ghost" onclick="deleteMatchPair(5,0,3)" style="color:var(--accent)">✕</button>
+          </div>
+      </div>
+      <div>
+        <b style="font-size:13px">Columna B (respuesta correcta)</b>
+        
+          <div style="margin-top:6px">
+            <input type="text" value="Mercado de dinero" placeholder="Match para CETES" onchange="editMatchRight(5,0,0,this.value)">
+          </div>
+          <div style="margin-top:6px">
+            <input type="text" value="Mercado de capitales" placeholder="Match para Acciones serie B" onchange="editMatchRight(5,0,1,this.value)">
+          </div>
+          <div style="margin-top:6px">
+            <input type="text" value="Mercado de deuda corporativa" placeholder="Match para Bono cupón cero a 4 años" onchange="editMatchRight(5,0,2,this.value)">
+          </div>
+          <div style="margin-top:6px">
+            <input type="text" value="Mercado de dinero (banca)" placeholder="Match para Aceptación bancaria" onchange="editMatchRight(5,0,3,this.value)">
+          </div>
+      </div>
+    </div>
+    <button class="btn btn-sm btn-ghost" onclick="addMatchPair(5,0)" style="margin-top:8px">➕ Agregar par</button>
+      </div><div class="qe-question" data-qi="1">
+        <div class="qe-meta">
+          <span class="points-tag">5 pts</span>
+          <select onchange="editQuestionType(5,1,this.value)">
+            <option value="mc">Opción múltiple</option>
+            <option value="calc">Cálculo</option>
+            <option value="open">Abierta</option>
+            <option value="match" selected="">Relacionar columnas</option>
+          </select>
+          <span class="muted">Puntos:</span>
+          <input type="number" class="pts-input" value="5" min="0" onchange="editQuestionPoints(5,1,this.value)">
+          <span style="margin-left:auto">
+            <button class="btn btn-sm btn-ghost" onclick="moveQuestion(5,1,-1)">⬆</button>
+            <button class="btn btn-sm btn-ghost" onclick="moveQuestion(5,1,1)">⬇</button>
+            <button class="btn btn-sm btn-ghost" onclick="deleteQuestion(5,1)" style="color:var(--accent);border-color:var(--accent)">🗑️</button>
+          </span>
+        </div>
+        <textarea style="min-height:60px;width:100%" onchange="editQuestionText(5,1,this.value)" placeholder="Enunciado de la pregunta">Relaciona cada producto/institución con su función principal en el sistema financiero mexicano.</textarea>
+        <p class="muted" style="font-size:12px;margin:6px 0">Define los pares correctos. El alumno arrastrará los elementos de la columna B hacia la columna A.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div>
+        <b style="font-size:13px">Columna A (fija)</b>
+        
+          <div style="display:flex;gap:6px;margin-top:6px">
+            <input type="text" value="Crédito refaccionario" placeholder="Elemento 1" onchange="editMatchLeft(5,1,0,this.value)">
+            <button class="btn btn-sm btn-ghost" onclick="deleteMatchPair(5,1,0)" style="color:var(--accent)">✕</button>
+          </div>
+          <div style="display:flex;gap:6px;margin-top:6px">
+            <input type="text" value="Crédito de habilitación o avío" placeholder="Elemento 2" onchange="editMatchLeft(5,1,1,this.value)">
+            <button class="btn btn-sm btn-ghost" onclick="deleteMatchPair(5,1,1)" style="color:var(--accent)">✕</button>
+          </div>
+          <div style="display:flex;gap:6px;margin-top:6px">
+            <input type="text" value="Bancomext" placeholder="Elemento 3" onchange="editMatchLeft(5,1,2,this.value)">
+            <button class="btn btn-sm btn-ghost" onclick="deleteMatchPair(5,1,2)" style="color:var(--accent)">✕</button>
+          </div>
+          <div style="display:flex;gap:6px;margin-top:6px">
+            <input type="text" value="Sociedad Hipotecaria Federal" placeholder="Elemento 4" onchange="editMatchLeft(5,1,3,this.value)">
+            <button class="btn btn-sm btn-ghost" onclick="deleteMatchPair(5,1,3)" style="color:var(--accent)">✕</button>
+          </div>
+          <div style="display:flex;gap:6px;margin-top:6px">
+            <input type="text" value="Nacional Financiera (NAFIN)" placeholder="Elemento 5" onchange="editMatchLeft(5,1,4,this.value)">
+            <button class="btn btn-sm btn-ghost" onclick="deleteMatchPair(5,1,4)" style="color:var(--accent)">✕</button>
+          </div>
+      </div>
+      <div>
+        <b style="font-size:13px">Columna B (respuesta correcta)</b>
+        
+          <div style="margin-top:6px">
+            <input type="text" value="Adquisición de activos fijos" placeholder="Match para Crédito refaccionario" onchange="editMatchRight(5,1,0,this.value)">
+          </div>
+          <div style="margin-top:6px">
+            <input type="text" value="Capital de trabajo / inventarios" placeholder="Match para Crédito de habilitación o avío" onchange="editMatchRight(5,1,1,this.value)">
+          </div>
+          <div style="margin-top:6px">
+            <input type="text" value="Financiamiento a comercio exterior" placeholder="Match para Bancomext" onchange="editMatchRight(5,1,2,this.value)">
+          </div>
+          <div style="margin-top:6px">
+            <input type="text" value="Fondeo a vivienda" placeholder="Match para Sociedad Hipotecaria Federal" onchange="editMatchRight(5,1,3,this.value)">
+          </div>
+          <div style="margin-top:6px">
+            <input type="text" value="Apoyo a la PyME industrial" placeholder="Match para Nacional Financiera (NAFIN)" onchange="editMatchRight(5,1,4,this.value)">
+          </div>
+      </div>
+    </div>
+    <button class="btn btn-sm btn-ghost" onclick="addMatchPair(5,1)" style="margin-top:8px">➕ Agregar par</button>
+      </div><button class="btn btn-sm btn-primary" onclick="addQuestion(5)">➕ Agregar pregunta a esta sección</button>
+    </div><div class="qe-section" data-si="6">
+      <h3>
+        <span style="background:var(--primary);color:white;padding:4px 10px;border-radius:6px;font-size:14px">Sección VII</span>
+        <input type="text" value="Pregunta abierta · WACC" onchange="editSectionName(6, this.value)" placeholder="Nombre de la sección">
+        <span class="muted">Peso:</span>
+        <input type="number" value="15" min="0" style="width:70px" onchange="editSectionWeight(6, this.value)">
+        <span class="muted">pts</span>
+        <button class="btn btn-sm btn-ghost" onclick="moveSection(6, -1)" title="Subir">⬆</button>
+        <button class="btn btn-sm btn-ghost" onclick="moveSection(6, 1)" title="Bajar">⬇</button>
+        <button class="btn btn-sm btn-ghost" onclick="deleteSection(6)" style="color:var(--accent);border-color:var(--accent)" title="Eliminar">🗑️</button>
+      </h3><div style="background:#fff8e1;border:1px solid #f0d986;border-radius:8px;padding:10px 14px;margin-bottom:14px">
+      <label style="display:flex;align-items:center;gap:10px;margin:0;font-weight:600;color:#7a5300">
+        🎮 Bonus de esta sección:
+        <select onchange="editSectionBonus(6, this.value)" style="font-size:13px;padding:4px 8px">
+          <option value="_default" selected="">🎲 Por defecto (rotación automática)</option><option value="none">🚫 Sin bonus en esta sección</option><option value="pong">🏓 Pong</option><option value="memory">💰 Memoria Financiera</option><option value="whack">🔨 Caza-Topos</option><option value="guitar">🎸 Ritmo Financiero (Guitar Hero)</option><option value="trivia">❓ Trivia (preguntas personalizadas)</option>
+        </select>
+      </label></div><div class="qe-question" data-qi="0">
+        <div class="qe-meta">
+          <span class="points-tag">15 pts</span>
+          <select onchange="editQuestionType(6,0,this.value)">
+            <option value="mc">Opción múltiple</option>
+            <option value="calc">Cálculo</option>
+            <option value="open" selected="">Abierta</option>
+            <option value="match">Relacionar columnas</option>
+          </select>
+          <span class="muted">Puntos:</span>
+          <input type="number" class="pts-input" value="15" min="0" onchange="editQuestionPoints(6,0,this.value)">
+          <span style="margin-left:auto">
+            <button class="btn btn-sm btn-ghost" onclick="moveQuestion(6,0,-1)">⬆</button>
+            <button class="btn btn-sm btn-ghost" onclick="moveQuestion(6,0,1)">⬇</button>
+            <button class="btn btn-sm btn-ghost" onclick="deleteQuestion(6,0)" style="color:var(--accent);border-color:var(--accent)">🗑️</button>
+          </span>
+        </div>
+        <textarea style="min-height:60px;width:100%" onchange="editQuestionText(6,0,this.value)" placeholder="Enunciado de la pregunta">CASO INTEGRADOR. Industrias del Norte, S.A. de C.V. presenta la siguiente estructura financiera: (1) Crédito BBVA por $30,000,000 al 12.5% anual; (2) Cebures por $20,000,000 al 10.8% anual; (3) Capital contable a valor de mercado $50,000,000. Beta = 1.25; tasa libre de riesgo (Bonos M 10 años) = 9.5%; rendimiento esperado del mercado = 16%; ISR = 30%. Calcula: a) Costo después de impuestos de cada deuda y costo ponderado de la deuda. b) Costo de capital con CAPM. c) WACC final mostrando pesos D/V y E/V. d) Interpreta brevemente el resultado.</textarea>
+        <p class="muted" style="font-size:12px;margin:6px 0">Las preguntas abiertas se califican manualmente. El alumno verá un cuadro de respuesta amplio.</p>
+    <label style="font-size:12px">Rúbrica (opcional · JSON):</label>
+    <textarea style="min-height:60px;width:100%;font-family:monospace;font-size:12px" onchange="editQuestionRubric(6,0,this.value)" placeholder="[{&quot;criterio&quot;:&quot;...&quot;,&quot;pts&quot;:5}]">[
+  {
+    "criterio": "Costo de deuda después de impuestos (cada crédito y ponderado)",
+    "pts": 4
+  },
+  {
+    "criterio": "Costo de capital (CAPM): Ke = Rf + β(Rm − Rf)",
+    "pts": 4
+  },
+  {
+    "criterio": "WACC con pesos D/V y E/V correctos",
+    "pts": 5
+  },
+  {
+    "criterio": "Interpretación financiera del resultado",
+    "pts": 2
+  }
+]</textarea>
+      </div><button class="btn btn-sm btn-primary" onclick="addQuestion(6)">➕ Agregar pregunta a esta sección</button>
+    </div><div class="qe-section" data-si="7">
+      <h3>
+        <span style="background:var(--primary);color:white;padding:4px 10px;border-radius:6px;font-size:14px">Sección VIII</span>
+        <input type="text" value="Pregunta abierta · Tablas de amortización" onchange="editSectionName(7, this.value)" placeholder="Nombre de la sección">
+        <span class="muted">Peso:</span>
+        <input type="number" value="15" min="0" style="width:70px" onchange="editSectionWeight(7, this.value)">
+        <span class="muted">pts</span>
+        <button class="btn btn-sm btn-ghost" onclick="moveSection(7, -1)" title="Subir">⬆</button>
+        <button class="btn btn-sm btn-ghost" onclick="moveSection(7, 1)" title="Bajar">⬇</button>
+        <button class="btn btn-sm btn-ghost" onclick="deleteSection(7)" style="color:var(--accent);border-color:var(--accent)" title="Eliminar">🗑️</button>
+      </h3><div style="background:#fff8e1;border:1px solid #f0d986;border-radius:8px;padding:10px 14px;margin-bottom:14px">
+      <label style="display:flex;align-items:center;gap:10px;margin:0;font-weight:600;color:#7a5300">
+        🎮 Bonus de esta sección:
+        <select onchange="editSectionBonus(7, this.value)" style="font-size:13px;padding:4px 8px">
+          <option value="_default" selected="">🎲 Por defecto (rotación automática)</option><option value="none">🚫 Sin bonus en esta sección</option><option value="pong">🏓 Pong</option><option value="memory">💰 Memoria Financiera</option><option value="whack">🔨 Caza-Topos</option><option value="guitar">🎸 Ritmo Financiero (Guitar Hero)</option><option value="trivia">❓ Trivia (preguntas personalizadas)</option>
+        </select>
+      </label></div><div class="qe-question" data-qi="0">
+        <div class="qe-meta">
+          <span class="points-tag">15 pts</span>
+          <select onchange="editQuestionType(7,0,this.value)">
+            <option value="mc">Opción múltiple</option>
+            <option value="calc">Cálculo</option>
+            <option value="open" selected="">Abierta</option>
+            <option value="match">Relacionar columnas</option>
+          </select>
+          <span class="muted">Puntos:</span>
+          <input type="number" class="pts-input" value="15" min="0" onchange="editQuestionPoints(7,0,this.value)">
+          <span style="margin-left:auto">
+            <button class="btn btn-sm btn-ghost" onclick="moveQuestion(7,0,-1)">⬆</button>
+            <button class="btn btn-sm btn-ghost" onclick="moveQuestion(7,0,1)">⬇</button>
+            <button class="btn btn-sm btn-ghost" onclick="deleteQuestion(7,0)" style="color:var(--accent);border-color:var(--accent)">🗑️</button>
+          </span>
+        </div>
+        <textarea style="min-height:60px;width:100%" onchange="editQuestionText(7,0,this.value)" placeholder="Enunciado de la pregunta">Crédito de $1,000,000 a 5 años con tasa anual del 12%. Construye en el espacio de respuesta: (1) la tabla de amortización por sistema FRANCÉS (cuotas iguales — calcula primero el PMT) y (2) la tabla por sistema ALEMÁN (amortización constante de $200,000). Para cada período indica: saldo inicial, interés, amortización, pago y saldo final. Al final, compara los intereses totales pagados en ambos sistemas y explica brevemente por qué difieren.</textarea>
+        <p class="muted" style="font-size:12px;margin:6px 0">Las preguntas abiertas se califican manualmente. El alumno verá un cuadro de respuesta amplio.</p>
+    <label style="font-size:12px">Rúbrica (opcional · JSON):</label>
+    <textarea style="min-height:60px;width:100%;font-family:monospace;font-size:12px" onchange="editQuestionRubric(7,0,this.value)" placeholder="[{&quot;criterio&quot;:&quot;...&quot;,&quot;pts&quot;:5}]">[
+  {
+    "criterio": "PMT francés correcto (~$277,410)",
+    "pts": 2
+  },
+  {
+    "criterio": "Tabla francés: 5 períodos coherentes y saldo final = 0",
+    "pts": 5
+  },
+  {
+    "criterio": "Amortización constante alemán = $200,000",
+    "pts": 1
+  },
+  {
+    "criterio": "Tabla alemán: pago decreciente y saldo final = 0",
+    "pts": 5
+  },
+  {
+    "criterio": "Comparación de intereses totales explicada",
+    "pts": 2
+  }
+]</textarea>
+      </div><button class="btn btn-sm btn-primary" onclick="addQuestion(7)">➕ Agregar pregunta a esta sección</button>
+    </div><button class="btn btn-primary" onclick="addSection()">➕ Agregar nueva sección</button>
+    <button class="btn btn-ok" onclick="saveBankVisual()" style="margin-left:8px">💾 Guardar todos los cambios</button></div>
 
       <!-- JSON editor (advanced mode) -->
       <div id="bankAdvanced" class="hidden">
@@ -1073,7 +2468,7 @@ CREATE POLICY "docente_select" ON resultados FOR SELECT TO anon USING (true);</d
         </div>
         <div>
           <label>Examen asignado</label>
-          <select id="newStudentExam"></select>
+          <select id="newStudentExam"><option value="default">Examen Final · Financiamiento Empresarial</option><option value="admin_fin">Examen · Administración Financiera</option></select>
         </div>
         <button class="btn btn-primary" onclick="addStudent()">➕ Agregar</button>
       </div>
@@ -1089,11 +2484,11 @@ CREATE POLICY "docente_select" ON resultados FOR SELECT TO anon USING (true);</d
         <button class="btn btn-ghost btn-sm" onclick="clearStudents()" style="color:var(--accent);border-color:var(--accent)">🗑️ Borrar todos</button>
         <span style="margin-left:auto">
           <label style="display:inline;margin:0;font-weight:600">Filtrar por examen:</label>
-          <select id="studentFilterExam" onchange="renderStudents()" style="width:auto;margin-left:6px"></select>
+          <select id="studentFilterExam" onchange="renderStudents()" style="width:auto;margin-left:6px"><option value="__all__">— Todos los exámenes —</option><option value="default">Examen Final · Financiamiento Empresarial</option><option value="admin_fin">Examen · Administración Financiera</option></select>
         </span>
       </div>
       <p class="muted" style="font-size:12px">Formato CSV/Excel (3 columnas): <code>Nombre, Código (opcional), Código de examen (opcional)</code>. Si no especificas el código de examen, los alumnos importados serán asignados al examen actualmente seleccionado en "Filtrar por examen".</p>
-      <div id="studentsList"></div>
+      <div id="studentsList"><p class="muted">Aún no hay alumnos registrados.</p></div>
     </div>
 
     </div> <!-- /admin-tab-content students -->
@@ -1113,7 +2508,7 @@ CREATE POLICY "docente_select" ON resultados FOR SELECT TO anon USING (true);</d
         <button class="btn btn-ghost btn-sm" onclick="clearResults()" style="color:var(--accent);border-color:var(--accent);margin-left:auto">🗑️ Borrar todos los resultados</button>
       </div>
       <p class="muted" style="font-size:12px">El JSON incluye TODAS las respuestas (multi-opción, abiertas, hojas de cálculo). Útil para respaldo o transferir entre dispositivos. CSV/Excel sólo incluye calificaciones resumidas.</p>
-      <div id="resultsBox"></div>
+      <div id="resultsBox"><p class="muted">Aún no hay resultados.</p></div>
     </div>
     </div> <!-- /admin-tab-content results -->
 
@@ -1122,10 +2517,10 @@ CREATE POLICY "docente_select" ON resultados FOR SELECT TO anon USING (true);</d
     <div class="card">
       <h2 style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
         <span>📈 Analítica del examen</span>
-        <select id="analyticsExamSel" onchange="renderAnalytics()" style="font-size:13px;padding:6px 10px"></select>
+        <select id="analyticsExamSel" onchange="renderAnalytics()" style="font-size:13px;padding:6px 10px"><option value="_all">📚 Todos los exámenes</option><option value="default" selected="">Examen Final · Financiamiento Empresarial</option><option value="admin_fin">Examen · Administración Financiera</option></select>
       </h2>
       <p class="muted">Indicadores de desempeño, comportamiento durante el examen y retroalimentación de los alumnos.</p>
-      <div id="analyticsContent"></div>
+      <div id="analyticsContent"><p class="muted" style="padding:20px;text-align:center">📭 Aún no hay alumnos que hayan terminado este examen. Cuando terminen, aquí verás gráficos e indicadores.</p></div>
     </div>
     </div> <!-- /admin-tab-content analytics -->
 
@@ -1133,7 +2528,7 @@ CREATE POLICY "docente_select" ON resultados FOR SELECT TO anon USING (true);</d
     <div class="admin-tab-content" data-tab-content="alerts">
     <div class="card">
       <h2>🚨 Alertas de intentos de trampa</h2>
-      <div id="alertsBox" class="alert-list"></div>
+      <div id="alertsBox" class="alert-list"><p class="muted">No hay alertas registradas.</p></div>
     </div>
     </div> <!-- /admin-tab-content alerts -->
 
@@ -1297,7 +2692,7 @@ CREATE POLICY "docente_select" ON resultados FOR SELECT TO anon USING (true);</d
       ⏱️ El cronómetro del examen SIGUE CONTANDO. Vuelve pronto a tu examen.
     </p>
     <div class="center" style="margin-top:14px">
-      <button id="warnAckBtn" class="btn btn-primary" onclick="dismissWarn()" disabled>
+      <button id="warnAckBtn" class="btn btn-primary" onclick="dismissWarn()" disabled="">
         <span id="warnAckLabel">Espera <b id="warnCountdown">5</b>s…</span>
       </button>
     </div>
@@ -2429,11 +3824,17 @@ async function init() {
 
   state.config = loadStore(STORE_KEYS.config, state.config);
 
-  // Inicializar Supabase con credenciales guardadas
+  // Inicializar Supabase con credenciales guardadas O defaults integrados
   const sbCfg = loadStore(STORE_KEYS.supabase, null);
-  if (sbCfg?.url && sbCfg?.key) {
-    initSupabase(sbCfg.url, sbCfg.key);
-    updateSupabaseBadge(sbCfg.url ? 'ok' : 'none');
+  const sbUrl = sbCfg?.url || SUPABASE_DEFAULTS.url;
+  const sbKey = sbCfg?.key || SUPABASE_DEFAULTS.key;
+  if (sbUrl && sbKey) {
+    initSupabase(sbUrl, sbKey);
+    // Si venían de DEFAULTS y no estaban guardados, guardarlos ahora
+    if (!sbCfg?.url && SUPABASE_DEFAULTS.url) {
+      saveStore(STORE_KEYS.supabase, { url: sbUrl, key: sbKey });
+    }
+    updateSupabaseBadge(sbUrl ? 'ok' : 'none');
   } else {
     updateSupabaseBadge('none');
   }
@@ -8532,6 +9933,36 @@ function renderFeedbackSummary(results) {
   </div>`;
 }
 
+// Genera y descarga una versión del archivo con las credenciales
+// de Supabase ya integradas — sube ese archivo a GitHub y todos
+// los dispositivos se conectan solos sin configurar nada.
+async function exportWithSupabase() {
+  const cfg = loadStore(STORE_KEYS.supabase, null);
+  if (!cfg?.url || !cfg?.key) {
+    showToast('Configura y guarda Supabase primero', 'warning'); return;
+  }
+  showToast('Preparando archivo…', 'info', 4000);
+  try {
+    let html;
+    if (window.location.protocol === 'file:') {
+      html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+    } else {
+      const resp = await fetch(window.location.href);
+      html = await resp.text();
+    }
+    const marker = "const SUPABASE_DEFAULTS = { url: 'https://ycjtoorijworrcpuetff.supabase.co', key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InljanRvb3JpandvcnJjcHVldGZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0NTU5MTAsImV4cCI6MjA5NDAzMTkxMH0.ZWQUYkuiW8QKYdqVgEqDL18iwfsyYAx1HtcDryT5wTM' };";
+    const replacement = `const SUPABASE_DEFAULTS = { url: '${cfg.url}', key: '${cfg.key}' };`;
+    if (!html.includes(marker)) {
+      showToast('Versión incorrecta del archivo. Descarga la última.', 'error', 5000); return;
+    }
+    const modified = html.replace(marker, replacement);
+    downloadFile('sistema_examen.html', modified, 'text/html');
+    showToast('✅ Archivo listo. Súbelo a GitHub — todos los alumnos se conectarán solos.', 'success', 7000);
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error', 5000);
+  }
+}
+
 // Sube un alumno a Supabase (upsert: si ya existe lo actualiza)
 async function syncStudentToSupabase(student) {
   if (!_sb) return;
@@ -8815,6 +10246,13 @@ function downloadAcadGuardTemplate() {
    Docente: abre admin → "Traer resultados" → ve todo centralizado.
    ========================================================================= */
 
+// ============================================================
+// SUPABASE_DEFAULTS — credenciales integradas directamente.
+// Si están llenas, todos los dispositivos se conectan solos
+// sin que el alumno ni el docente tengan que configurar nada.
+// ============================================================
+const SUPABASE_DEFAULTS = { url: '', key: '' };
+
 let _sb = null;        // cliente Supabase (null = no configurado)
 
 // Inicializa el cliente Supabase con las credenciales guardadas
@@ -9010,5 +10448,6 @@ function loadSupabaseConfigUI() {
 
 (async () => { await init(); })();
 </script>
-</body>
-</html>
+
+
+</body></html>
