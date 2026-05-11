@@ -682,7 +682,7 @@
 </div>
 
 <!-- CONTENEDOR DE TOASTS -->
-<div id="toastContainer" aria-live="polite" aria-atomic="false"><div class="toast-item success" role="alert" style="--dur: 2.8s;"><span class="t-icon" aria-hidden="true">✅</span><span>Supabase conectado correctamente</span></div><div class="toast-item info" role="alert" style="--dur: 4s;"><span class="t-icon" aria-hidden="true">ℹ️</span><span>Preparando archivo…</span></div></div>
+<div id="toastContainer" aria-live="polite" aria-atomic="false"><div class="toast-item info" role="alert" style="--dur: 4s;"><span class="t-icon" aria-hidden="true">ℹ️</span><span>Preparando archivo…</span></div></div>
 
 <!-- ================= LOGIN ================= -->
 <div id="screenLogin" class="container hidden">
@@ -963,7 +963,7 @@ CREATE POLICY "docente_select" ON resultados FOR SELECT TO anon USING (true);</d
         <button class="btn btn-primary" onclick="exportWithSupabase()" style="background:#1f4e79;border-color:#1f4e79;width:100%" title="Genera un archivo HTML con Supabase ya integrado para subir a GitHub">📦 Generar archivo para GitHub (con Supabase integrado)</button>
         <p class="muted" style="font-size:12px;margin-top:6px">Este botón genera un <code>sistema_examen.html</code> con tus credenciales ya integradas. Súbelo a GitHub y todos los alumnos se conectarán automáticamente sin configurar nada.</p>
       </div>
-      <div id="supabaseStatus" style="margin-top:10px;font-size:13px"><span style="color:#1e7e34;font-weight:700">✅ Conexión exitosa. La plataforma está lista para recibir resultados de tus alumnos.</span></div>
+      <div id="supabaseStatus" style="margin-top:10px;font-size:13px"></div>
     </div>
 
     </div> <!-- /admin-tab-content config -->
