@@ -9144,7 +9144,53 @@ window.addEventListener("load", function(){
     window.deleteExam._ep=true;
   }
 });
+</script><script>
+window.addEventListener("load", function(){
+  var SU="https://ycjtoorijworrcpuetff.supabase.co",SK="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InljanRvb3JpandvcnJjcHVldGZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0NTU5MTAsImV4cCI6MjA5NDAzMTkxMH0.ZWQUYkuiW8QKYdqVgEqDL18iwfsyYAx1HtcDryT5wTM";
+  function gSX(){try{return window.supabase.createClient(SU,SK,{auth:{persistSession:false}});}catch(e){return null;}}
+
+  async function uploadExams(exams){
+    var s=gSX();if(!s||!exams)return;
+    var a=window.getActiveExamId?window.getActiveExamId():"default";
+    for(var id in exams){
+      try{await s.from("examenes").upsert({exam_id:id,titulo:exams[id].title||"Examen",contenido:exams[id],activo:id===a,actualizado:new Date().toISOString()},{onConflict:"exam_id"});}
+      catch(e){console.warn("uploadExam:",e.message);}
+    }
+    if(window.showToast)window.showToast("Examen guardado en la nube","success",2000);
+  }
+
+  async function deleteExamCloud(id){
+    var s=gSX();if(!s)return;
+    try{await s.from("examenes").delete().eq("exam_id",id);}
+    catch(e){console.warn("deleteExamCloud:",e.message);}
+  }
+
+  // Interceptar DB.set — funciona desde cualquier parte del código
+  if(window.DB&&!window.DB._examPatched){
+    var origSet=window.DB.set.bind(window.DB);
+    var _dt=null;
+    window.DB.set=function(key,val){
+      origSet(key,val);
+      if(key==="exam_exams_v1"){
+        clearTimeout(_dt);
+        _dt=setTimeout(function(){uploadExams(val);},1500);
+      }
+    };
+    window.DB._examPatched=true;
+  }
+
+  // Interceptar deleteExam para borrar de Supabase
+  var origDel=window.deleteExam;
+  if(origDel&&!origDel._ep2){
+    window.deleteExam=function(id){
+      deleteExamCloud(id);
+      if(origDel)origDel.call(window,id);
+    };
+    window.deleteExam._ep2=true;
+  }
+});
 </script></body>
 </html>
+
 
 
