@@ -9102,6 +9102,49 @@ window.addEventListener("load", function(){
     window.addStudent._p=true;
   }
 });
+</script><script>
+window.addEventListener("load", function(){
+  var SU="https://ycjtoorijworrcpuetff.supabase.co",SK="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InljanRvb3JpandvcnJjcHVldGZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0NTU5MTAsImV4cCI6MjA5NDAzMTkxMH0.ZWQUYkuiW8QKYdqVgEqDL18iwfsyYAx1HtcDryT5wTM";
+  function gSE(){try{return window.supabase.createClient(SU,SK,{auth:{persistSession:false}});}catch(e){return null;}}
+
+  async function uploadExamsToSupabase(exams){
+    var s=gSE();if(!s)return;
+    var a=window.getActiveExamId?window.getActiveExamId():"default";
+    for(var id in exams){
+      try{await s.from("examenes").upsert({exam_id:id,titulo:exams[id].title||"Examen",contenido:exams[id],activo:id===a,actualizado:new Date().toISOString()},{onConflict:"exam_id"});}
+      catch(e){console.warn("uploadExam:",e.message);}
+    }
+  }
+
+  async function deleteExamFromSupabase(id){
+    var s=gSE();if(!s)return;
+    try{await s.from("examenes").delete().eq("exam_id",id);}
+    catch(e){console.warn("deleteExam:",e.message);}
+  }
+
+  // Parchear setExams para auto-sincronizar con debounce
+  var origSetExams=window.setExams;
+  var _debounce=null;
+  if(origSetExams&&!origSetExams._ep){
+    window.setExams=function(exams){
+      if(origSetExams)origSetExams.call(window,exams);
+      clearTimeout(_debounce);
+      _debounce=setTimeout(function(){uploadExamsToSupabase(exams);},2000);
+    };
+    window.setExams._ep=true;
+  }
+
+  // Parchear deleteExam para borrar de Supabase
+  var origDelExam=window.deleteExam;
+  if(origDelExam&&!origDelExam._ep){
+    window.deleteExam=function(id){
+      deleteExamFromSupabase(id);
+      if(origDelExam)origDelExam.call(window,id);
+    };
+    window.deleteExam._ep=true;
+  }
+});
 </script></body>
 </html>
+
 
