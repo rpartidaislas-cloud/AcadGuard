@@ -9101,7 +9101,73 @@ window.toggleStudentDisabled = function(code){
     if(s) window._sb.from('alumnos').update({disabled:!!s.disabled}).eq('codigo',code).then(function(){});
   }
 };
+</script><script>
+(function(){
+  var SB_URL = 'https://ycjtoorijworrcpuetff.supabase.co';
+  var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InljanRvb3JpandvcnJjcHVldGZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0NTU5MTAsImV4cCI6MjA5NDAzMTkxMH0.ZWQUYkuiW8QKYdqVgEqDL18iwfsyYAx1HtcDryT5wTM';
+  var pc = null;
+
+  function getPc(){
+    if(pc) return pc;
+    try{ pc = window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:false}}); }catch(e){}
+    return pc;
+  }
+
+  window.syncStudentsFromSupabase = async function(){
+    var sb = getPc(); if(!sb) return;
+    try{
+      var r = await sb.from('alumnos').select('*');
+      if(r.error) throw r.error;
+      var cloud = (r.data||[]).map(function(d){return{name:d.nombre,code:d.codigo,examId:d.examen_id||'default',disabled:!!d.disabled};});
+      var local = window.getStudents ? window.getStudents() : [];
+      var merged = local.slice(); var added=0;
+      cloud.forEach(function(cs){
+        var i=merged.findIndex(function(x){return x.code===cs.code;});
+        if(i>=0){merged[i].disabled=cs.disabled;}else{merged.push(cs);added++;}
+      });
+      if(window.setStudents) window.setStudents(merged);
+      if(window.showToast) window.showToast('Alumnos: '+(cloud.length)+' en nube'+(added>0?', '+added+' nuevos':''),'success',3000);
+    }catch(e){console.warn('syncAlumnos:',e.message);}
+  };
+
+  window.syncResultsFromSupabase = async function(){
+    var sb = getPc(); if(!sb) return;
+    try{
+      var r = await sb.from('resultados').select('*').order('creado_en',{ascending:false});
+      if(r.error) throw r.error;
+      var cloud = (r.data||[]).map(function(d){return{student:d.alumno,studentCode:d.codigo,examId:d.examen_id,examTitle:d.examen_titulo,startedAt:d.inicio,finishedAt:d.fin,reason:d.razon,answers:d.respuestas,alerts:d.alertas||[],games:d.juegos||{},bonusEarned:d.bonus_ganado||0,scoreMC:d.puntos_mc||0,maxMC:d.max_mc||0,scoreTotal:d.total||0,feedback:d.retroalimentacion,_supabaseId:d.id};});
+      var RKEY = 'exam_results_v1';
+      var local = window.loadStore ? window.loadStore(RKEY,[]) : [];
+      var merged = local.slice(); var added=0;
+      cloud.forEach(function(cr){
+        var exists=local.some(function(lr){return lr.studentCode===cr.studentCode&&lr.finishedAt===cr.finishedAt;});
+        if(!exists){merged.push(cr);added++;}
+      });
+      if(window.saveStore) window.saveStore(RKEY,merged);
+      if(window.renderResults) window.renderResults();
+      if(window.showToast) window.showToast('Resultados: '+cloud.length+' en nube'+(added>0?', '+added+' nuevos':''),'success',3000);
+    }catch(e){console.warn('syncResults:',e.message);}
+  };
+
+  var _orig = null;
+  function patchShowAdmin(){
+    if(window.showAdmin && window.showAdmin._patched) return;
+    _orig = window.showAdmin;
+    window.showAdmin = function(){
+      if(_orig) _orig.apply(this,arguments);
+      setTimeout(function(){
+        window.syncStudentsFromSupabase();
+        window.syncResultsFromSupabase();
+      },1000);
+    };
+    window.showAdmin._patched = true;
+  }
+  // Intentar parchear inmediatamente o esperar al DOM
+  if(document.readyState==='complete'){patchShowAdmin();}
+  else{window.addEventListener('load',patchShowAdmin);}
+})();
 </script></body>
 </html>
+
 
 
