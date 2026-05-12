@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -672,7 +672,7 @@
     position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
   }
 </style>
-<script>(function(){try{var k="ag_supabase_config";if(!localStorage.getItem(k)){localStorage.setItem(k,JSON.stringify({url:"https://ycjtoorijworrcpuetff.supabase.co",key:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InljanRvb3JpandvcnJjcHVldGZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0NTU5MTAsImV4cCI6MjA5NDAzMTkxMH0.ZWQUYkuiW8QKYdqVgEqDL18iwfsyYAx1HtcDryT5wTM"}))}}}catch(e){}})();</script></head>
+</head>
 <body>
 
 <!-- PANTALLA DE CARGA (IndexedDB) -->
@@ -1090,6 +1090,7 @@ CREATE POLICY "docente_select" ON resultados FOR SELECT TO anon USING (true);</d
         <button class="btn btn-ghost btn-sm" onclick="exportStudents()">📥 Exportar lista (CSV)</button>
         <button class="btn btn-ghost btn-sm" onclick="exportStudents('codes')">🖨️ Exportar códigos</button>
         <button class="btn btn-ghost btn-sm" onclick="pushAllStudentsToSupabase()" style="color:#059669;border-color:#059669" title="Sube todos los alumnos a Supabase para que puedan ingresar desde cualquier dispositivo">☁️ Subir alumnos a la nube</button>
+        <button class="btn btn-ghost btn-sm" onclick="syncStudentsFromSupabase()" style="color:#2e75b6;border-color:#2e75b6" title="Trae los alumnos registrados en Supabase al panel">🔄 Traer alumnos de la nube</button>
         <button class="btn btn-ghost btn-sm" onclick="clearStudents()" style="color:var(--accent);border-color:var(--accent)">🗑️ Borrar todos</button>
         <span style="margin-left:auto">
           <label style="display:inline;margin:0;font-weight:600">Filtrar por examen:</label>
@@ -3260,14 +3261,18 @@ function toggleStudentDisabled(code) {
     s.disabled = false;
     s.disabledReason = null;
     setStudents(list);
-    showToast("" + s.name + " habilitado. Puede ingresar al examen.");
+    showToast(s.name + " habilitado. Puede ingresar al examen.", 'success');
+    // Sincronizar con Supabase
+    if (_sb) _sb.from('alumnos').update({ disabled: false }).eq('codigo', code).then(() => {});
   } else {
-    const reason = prompt("Razón para deshabilitar a " + s.name + " (opcional, se le mostrará al alumno):", "");
-    if (reason === null) return; // canceló
+    const reason = prompt("Razón para deshabilitar a " + s.name + " (opcional):", "");
+    if (reason === null) return;
     s.disabled = true;
     s.disabledReason = reason || 'Decisión del docente';
     setStudents(list);
-    showToast("" + s.name + " deshabilitado. NO podrá ingresar al examen.");
+    showToast(s.name + " deshabilitado.", 'warning');
+    // Sincronizar con Supabase
+    if (_sb) _sb.from('alumnos').update({ disabled: true }).eq('codigo', code).then(() => {});
   }
 }
 
@@ -3741,8 +3746,14 @@ function showAdmin() {
   renderAlerts();
   renderAnalytics();
   updateExamEditorTitle();
-  // Actualizar badges con conteos y restaurar pestaña activa
   updateAdminTabBadges();
+
+  // Auto-sincronizar desde Supabase al abrir el panel
+  if (_sb) {
+    syncStudentsFromSupabase();
+    syncFromSupabase();
+  }
+
   let savedTab = null;
   try { savedTab = localStorage.getItem('adminActiveTab'); } catch(_) {}
   if (savedTab && document.querySelector(`#adminTabs .admin-tab[data-tab="${savedTab}"]`)) {
@@ -8591,6 +8602,40 @@ async function syncStudentToSupabase(student) {
 }
 
 // Sube TODOS los alumnos locales a Supabase de una vez
+async // Descarga alumnos de Supabase y los fusiona con los locales
+async function syncStudentsFromSupabase() {
+  if (!_sb) { showToast('Supabase no configurado', 'warning'); return; }
+  try {
+    const { data, error } = await _sb.from('alumnos').select('*');
+    if (error) throw error;
+    const fromCloud = (data || []).map(r => ({
+      name: r.nombre,
+      code: r.codigo,
+      examId: r.examen_id || getActiveExamId(),
+      disabled: r.disabled || false,
+      disabledReason: r.disabled_reason || ''
+    }));
+    const local = getStudents();
+    const merged = [...local];
+    let added = 0;
+    // Actualizar existentes y agregar nuevos
+    for (const cs of fromCloud) {
+      const idx = merged.findIndex(ls => ls.code === cs.code);
+      if (idx >= 0) {
+        // Actualizar disabled desde Supabase (la nube es autoritativa)
+        merged[idx].disabled = cs.disabled;
+      } else {
+        merged.push(cs);
+        added++;
+      }
+    }
+    setStudents(merged);
+    if (added > 0) showToast(`☁️ ${added} nuevos alumnos traídos de Supabase`, 'success', 4000);
+  } catch (e) {
+    console.warn('syncStudentsFromSupabase error:', e.message);
+  }
+}
+
 async function pushAllStudentsToSupabase() {
   if (!_sb) { showToast('Configura Supabase primero', 'warning'); return; }
   const students = getStudents();
@@ -9057,164 +9102,615 @@ function loadSupabaseConfigUI() {
 
 (async () => { await init(); })();
 </script>
-<!-- SYNC SUPABASE -->
+
+<!-- ═══════════════════════════════════════════════════════════
+     MÓDULO DE SINCRONIZACIÓN BIDIRECCIONAL — versión limpia
+     Funciones: borrar/deshabilitar alumnos, sync resultados,
+     sync exámenes, auto-sync en showAdmin.
+     ═══════════════════════════════════════════════════════════ -->
 <script>
-(function(){var SU='https://ycjtoorijworrcpuetff.supabase.co',SK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InljanRvb3JpandvcnJjcHVldGZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0NTU5MTAsImV4cCI6MjA5NDAzMTkxMH0.ZWQUYkuiW8QKYdqVgEqDL18iwfsyYAx1HtcDryT5wTM';
-function gS(){try{return window.supabase.createClient(SU,SK,{auth:{persistSession:false}});}catch(e){return null;}}
-window.removeStudentCloud=function(c){var s=gS();if(s)s.from('alumnos').delete().eq('codigo',c).then(function(){});};
-window.syncStudentsFromSupabase=async function(){var s=gS();if(!s)return;var r=await s.from('alumnos').select('*');if(r.error)return;var c=(r.data||[]).map(function(d){return{name:d.nombre,code:d.codigo,examId:d.examen_id||'default',disabled:!!d.disabled};});var l=window.getStudents?window.getStudents():[];var m=l.slice();c.forEach(function(x){var i=m.findIndex(function(y){return y.code===x.code;});if(i>=0)m[i].disabled=x.disabled;else m.push(x);});if(window.setStudents)window.setStudents(m);if(window.showToast)window.showToast('Alumnos sync: '+c.length,'success',2000);};
-window.syncResultsFromSupabase=async function(){var s=gS();if(!s)return;var r=await s.from('resultados').select('*').order('creado_en',{ascending:false});if(r.error)return;var c=(r.data||[]).map(function(d){return{student:d.alumno,studentCode:d.codigo,examId:d.examen_id,examTitle:d.examen_titulo,startedAt:d.inicio,finishedAt:d.fin,reason:d.razon,answers:d.respuestas,alerts:d.alertas||[],games:d.juegos||{},bonusEarned:d.bonus_ganado||0,scoreMC:d.puntos_mc||0,maxMC:d.max_mc||0,scoreTotal:d.total||0,_supabaseId:d.id};});var K='exam_results_v1';var l=window.loadStore?window.loadStore(K,[]):[];var m=l.slice();c.forEach(function(x){if(!l.some(function(y){return y.studentCode===x.studentCode&&y.finishedAt===x.finishedAt;}))m.push(x);});if(window.saveStore)window.saveStore(K,m);if(window.renderResults)window.renderResults();if(window.showToast)window.showToast('Resultados sync: '+c.length,'success',2000);};
-window.syncExamsToSupabase=async function(){var s=gS();if(!s)return;var e=window.getExams?window.getExams():{};var a=window.getActiveExamId?window.getActiveExamId():'default';for(var id in e){await s.from('examenes').upsert({exam_id:id,titulo:e[id].title||'Examen',contenido:e[id],activo:id===a},{onConflict:'exam_id'});}if(window.showToast)window.showToast('Examenes subidos','success',2000);};
-window.syncExamsFromSupabase=async function(){var s=gS();if(!s)return;var r=await s.from('examenes').select('*');if(r.error||!r.data)return;var e=window.getExams?window.getExams():{};r.data.forEach(function(x){e[x.exam_id]=x.contenido;});if(window.saveStore&&window.STORE_KEYS)window.saveStore(window.STORE_KEYS.exams,e);};
-window.addEventListener('load',function(){
-  var oR=window.removeStudent,oT=window.toggleStudentDisabled,oC=window.clearStudents,oA=window.showAdmin;
-  if(oR&&!oR._p){window.removeStudent=function(c){window.removeStudentCloud(c);if(oR)oR.call(window,c);};window.removeStudent._p=true;}
-  if(oT&&!oT._p){window.toggleStudentDisabled=function(c){if(oT)oT.call(window,c);setTimeout(function(){var l=window.getStudents?window.getStudents():[];var s=l.find(function(x){return x.code===c;});if(s){var sb2=gS();if(sb2)sb2.from('alumnos').update({disabled:!!s.disabled}).eq('codigo',c).then(function(){});}},150);};window.toggleStudentDisabled._p=true;}
-  if(oC&&!oC._p){window.clearStudents=function(){if(!confirm('Borrar TODOS?'))return;var s=gS();if(s)s.from('alumnos').delete().neq('codigo','__X__').then(function(){});if(window.setStudents)window.setStudents([]);if(window.showToast)window.showToast('Borrado','success',2000);};window.clearStudents._p=true;}
-  if(oA&&!oA._p){window.showAdmin=function(){if(oA)oA.apply(this,arguments);setTimeout(function(){window.syncStudentsFromSupabase();window.syncResultsFromSupabase();window.syncExamsFromSupabase();},1200);};window.showAdmin._p=true;}
-});
+(function() {
+  'use strict';
+  const SB_URL = 'https://ycjtoorijworrcpuetff.supabase.co';
+  const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InljanRvb3JpandvcnJjcHVldGZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0NTU5MTAsImV4cCI6MjA5NDAzMTkxMH0.ZWQUYkuiW8QKYdqVgEqDL18iwfsyYAx1HtcDryT5wTM';
+  let _pc = null;
+
+  function getSb() {
+    if (_pc) return _pc;
+    try { _pc = window.supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession: false } }); }
+    catch(e) { console.warn('Supabase client error:', e.message); }
+    return _pc;
+  }
+
+  /* ── Borrar alumno de Supabase ── */
+  window.removeStudentCloud = async function(code) {
+    const sb = getSb(); if (!sb) return;
+    try {
+      const { error } = await sb.from('alumnos').delete().eq('codigo', code);
+      if (error) console.warn('removeStudentCloud:', error.message);
+    } catch(e) { console.warn('removeStudentCloud:', e.message); }
+  };
+
+  /* ── Deshabilitar/habilitar en Supabase ── */
+  window.toggleStudentDisabledCloud = async function(code, disabled) {
+    const sb = getSb(); if (!sb) return;
+    try {
+      const { error } = await sb.from('alumnos').update({ disabled }).eq('codigo', code);
+      if (error) console.warn('toggleCloud:', error.message);
+    } catch(e) { console.warn('toggleCloud:', e.message); }
+  };
+
+  /* ── Traer resultados de Supabase ── */
+  window.syncResultsFromSupabase = async function() {
+    const sb = getSb(); if (!sb) return;
+    try {
+      const { data, error } = await sb.from('resultados').select('*').order('creado_en', { ascending: false });
+      if (error) throw error;
+      const cloud = (data || []).map(d => ({
+        student: d.alumno, studentCode: d.codigo, examId: d.examen_id,
+        examTitle: d.examen_titulo, startedAt: d.inicio, finishedAt: d.fin,
+        reason: d.razon, answers: d.respuestas, alerts: d.alertas || [],
+        games: d.juegos || {}, bonusEarned: d.bonus_ganado || 0,
+        scoreMC: d.puntos_mc || 0, maxMC: d.max_mc || 0,
+        scoreTotal: d.total || 0, feedback: d.retroalimentacion,
+        _integrity: d.integridad, _supabaseId: d.id
+      }));
+      const RKEY = 'exam_results_v1';
+      const local = window.loadStore ? window.loadStore(RKEY, []) : [];
+      const merged = [...local];
+      let added = 0;
+      cloud.forEach(cr => {
+        const exists = local.some(lr => lr.studentCode === cr.studentCode && lr.finishedAt === cr.finishedAt);
+        if (!exists) { merged.push(cr); added++; }
+      });
+      if (window.saveStore) window.saveStore(RKEY, merged);
+      if (window.renderResults) window.renderResults();
+      if (added > 0 && window.showToast)
+        window.showToast('Resultados: ' + cloud.length + ' en nube, ' + added + ' nuevos', 'success', 3000);
+    } catch(e) { console.warn('syncResults:', e.message); }
+  };
+
+  /* ── Traer alumnos de Supabase ── */
+  window.syncStudentsFromSupabase = async function() {
+    const sb = getSb(); if (!sb) return;
+    try {
+      const { data, error } = await sb.from('alumnos').select('*');
+      if (error) throw error;
+      const cloud = (data || []).map(d => ({
+        name: d.nombre, code: d.codigo,
+        examId: d.examen_id || 'default', disabled: !!d.disabled
+      }));
+      const local = window.getStudents ? window.getStudents() : [];
+      const merged = [...local];
+      let added = 0;
+      cloud.forEach(cs => {
+        const idx = merged.findIndex(ls => ls.code === cs.code);
+        if (idx >= 0) { merged[idx].disabled = cs.disabled; }
+        else { merged.push(cs); added++; }
+      });
+      if (window.setStudents) window.setStudents(merged);
+      if (added > 0 && window.showToast)
+        window.showToast('Alumnos: ' + cloud.length + ' en nube, ' + added + ' nuevos', 'success', 3000);
+    } catch(e) { console.warn('syncStudents:', e.message); }
+  };
+
+  /* ── Subir exámenes a Supabase ── */
+  window.syncExamsToSupabase = async function() {
+    const sb = getSb(); if (!sb) return;
+    const exams = window.getExams ? window.getExams() : {};
+    const ids = Object.keys(exams);
+    if (!ids.length) { if (window.showToast) window.showToast('No hay exámenes para subir', 'warning'); return; }
+    let ok = 0;
+    const activeId = window.getActiveExamId ? window.getActiveExamId() : 'default';
+    for (const id of ids) {
+      try {
+        await sb.from('examenes').upsert({
+          exam_id: id, titulo: exams[id].title || 'Examen',
+          contenido: exams[id], activo: id === activeId,
+          actualizado: new Date().toISOString()
+        }, { onConflict: 'exam_id' });
+        ok++;
+      } catch(e) { console.warn('syncExam error:', e.message); }
+    }
+    if (window.showToast) window.showToast('Exámenes subidos: ' + ok, 'success', 3000);
+  };
+
+  /* ── Descargar exámenes de Supabase ── */
+  window.syncExamsFromSupabase = async function() {
+    const sb = getSb(); if (!sb) return;
+    try {
+      const { data, error } = await sb.from('examenes').select('*');
+      if (error) throw error;
+      if (!data || !data.length) return;
+      const exams = window.getExams ? window.getExams() : {};
+      let added = 0;
+      data.forEach(row => {
+        if (!exams[row.exam_id]) { exams[row.exam_id] = row.contenido; added++; }
+        else { exams[row.exam_id] = row.contenido; } // actualizar siempre
+      });
+      if (window.saveStore && window.STORE_KEYS) window.saveStore(window.STORE_KEYS.exams, exams);
+      if (added > 0 && window.showToast)
+        window.showToast('Exámenes descargados: ' + added, 'success', 3000);
+    } catch(e) { console.warn('syncExamsFrom:', e.message); }
+  };
+
+  /* ── Patch: removeStudent también borra de Supabase ── */
+  function patchAll() {
+    // removeStudent
+    const origRemove = window.removeStudent;
+    if (origRemove && !origRemove._sb_patched) {
+      window.removeStudent = function(code) {
+        window.removeStudentCloud(code);  // fire-and-forget en Supabase
+        if (origRemove) origRemove.call(window, code);
+      };
+      window.removeStudent._sb_patched = true;
+    }
+
+    // toggleStudentDisabled
+    const origToggle = window.toggleStudentDisabled;
+    if (origToggle && !origToggle._sb_patched) {
+      window.toggleStudentDisabled = function(code) {
+        if (origToggle) origToggle.call(window, code);
+        // Leer estado DESPUÉS del toggle original
+        setTimeout(function() {
+          const list = window.getStudents ? window.getStudents() : [];
+          const s = list.find(x => x.code === code);
+          if (s) window.toggleStudentDisabledCloud(code, !!s.disabled);
+        }, 100);
+      };
+      window.toggleStudentDisabled._sb_patched = true;
+    }
+
+    // clearStudents: también borra de Supabase
+    const origClear = window.clearStudents;
+    if (origClear && !origClear._sb_patched) {
+      window.clearStudents = function() {
+        if (!confirm('¿Borrar TODOS los alumnos locales Y de Supabase?')) return;
+        const sb = getSb();
+        if (sb) sb.from('alumnos').delete().neq('codigo', '__NINGUNO__').then(() => {});
+        if (window.setStudents) window.setStudents([]);
+        if (window.showToast) window.showToast('Todos los alumnos eliminados', 'success', 2000);
+      };
+      window.clearStudents._sb_patched = true;
+    }
+
+    // showAdmin: auto-sync al entrar
+    const origAdmin = window.showAdmin;
+    if (origAdmin && !origAdmin._sb_patched) {
+      window.showAdmin = function() {
+        if (origAdmin) origAdmin.apply(this, arguments);
+        setTimeout(function() {
+          window.syncStudentsFromSupabase();
+          window.syncResultsFromSupabase();
+          window.syncExamsFromSupabase();
+        }, 1200);
+      };
+      window.showAdmin._sb_patched = true;
+    }
+  }
+
+  // Aplicar patches cuando el DOM esté listo
+  if (document.readyState === 'complete') {
+    patchAll();
+  } else {
+    window.addEventListener('load', patchAll);
+  }
+
 })();
 </script>
-<script>
-window.addEventListener("load", function(){
-  var SU="https://ycjtoorijworrcpuetff.supabase.co",SK="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InljanRvb3JpandvcnJjcHVldGZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0NTU5MTAsImV4cCI6MjA5NDAzMTkxMH0.ZWQUYkuiW8QKYdqVgEqDL18iwfsyYAx1HtcDryT5wTM";
-  function gS2(){try{return window.supabase.createClient(SU,SK,{auth:{persistSession:false}});}catch(e){return null;}}
-  window.syncStudentToSupabase = async function(student){
-    var s=gS2(); if(!s) return;
-    try{
-      var exams=window.getExams?window.getExams():{};
-      var et=exams[student.examId]?exams[student.examId].title:"";
-      await s.from("alumnos").upsert({
-        nombre:student.name, codigo:student.code,
-        examen_id:student.examId||null, examen_titulo:et,
-        disabled:!!student.disabled
-      },{onConflict:"codigo"});
-    }catch(e){console.warn("syncStudent:",e.message);}
-  };
-  var origAdd=window.addStudent;
-  if(origAdd&&!origAdd._p){
-    window.addStudent=function(){
-      origAdd.apply(this,arguments);
-      var list=window.getStudents?window.getStudents():[];
-      var last=list[list.length-1];
-      if(last) window.syncStudentToSupabase(last);
-    };
-    window.addStudent._p=true;
+<!-- AG_GRADER_MODULE -->
+
+<!-- /AG_GRADER_MODULE -->
+
+
+<style id="ag-grading-css">
+#ag-grade-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9999;overflow-y:auto;padding:20px}
+.ag-mbox{max-width:880px;margin:0 auto;background:#fff;border-radius:14px;box-shadow:0 8px 40px rgba(0,0,0,.3);overflow:hidden}
+.ag-mhead{background:linear-gradient(135deg,#1f4e79,#2e75b6);padding:20px 28px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.ag-mhead h2{color:#fff;margin:0;font-size:1.1em;flex:1}
+.ag-mclose{background:rgba(255,255,255,.2);border:none;color:#fff;width:34px;height:34px;border-radius:50%;cursor:pointer;font-size:18px;line-height:1}
+.ag-mclose:hover{background:rgba(255,255,255,.4)}
+.ag-mbody{padding:24px;max-height:62vh;overflow-y:auto}
+.ag-mfoot{background:#f8fafc;border-top:1px solid #e2e8f0;padding:15px 26px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.ag-sd{font-size:1em;color:#374151}.ag-sd b{color:#1f4e79}
+.ag-sbig{font-size:1.5em!important;font-weight:900!important}
+.ag-savebtn{background:#1f4e79;color:#fff;border:none;padding:10px 22px;border-radius:8px;cursor:pointer;font-weight:700}
+.ag-savebtn:hover{background:#163a5c}
+.ag-stitle{font-weight:800;color:#1f4e79;font-size:.82em;text-transform:uppercase;letter-spacing:.8px;margin:18px 0 8px;padding-bottom:5px;border-bottom:2px solid #d5e8f0}
+.ag-qc{border:1px solid #e2e8f0;border-radius:10px;padding:15px;margin-bottom:10px}
+.ag-qc.vc{border-left:4px solid #1e5631;background:#f0faf4}
+.ag-qc.vw{border-left:4px solid #dc2626;background:#fff5f5}
+.ag-qc.vo{border-left:4px solid #b45309;background:#fffbf0}
+.ag-qc.vm{border-left:4px solid #6366f1;background:#f8f7ff}
+.ag-qh{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.ag-qn{font-size:.75em;font-weight:700;color:#6b7280;text-transform:uppercase}
+.ag-qs{font-weight:700;font-size:.9em;padding:2px 10px;border-radius:20px;background:#e8f1f8;color:#1f4e79}
+.ag-qt{font-size:.88em;color:#111;margin:0 0 10px;line-height:1.5;white-space:pre-wrap}
+.ag-opt{display:flex;align-items:flex-start;gap:8px;padding:4px 8px;border-radius:5px;font-size:.83em;margin-bottom:2px}
+.ag-oi{width:22px;text-align:center;flex-shrink:0;font-weight:bold;color:#9ca3af}
+.ag-opt.ok{background:#d5e8d4}.ag-opt.ok .ag-oi{color:#1e5631}
+.ag-opt.sel{background:#dbeafe}.ag-opt.sel .ag-oi{color:#1f4e79}
+.ag-opt.bad{background:#fee2e2}.ag-opt.bad .ag-oi{color:#dc2626}
+.ag-sa{background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:11px;font-size:.85em;color:#374151;white-space:pre-wrap;line-height:1.5;max-height:150px;overflow-y:auto;margin:6px 0}
+.ag-rubric{background:#fffbeb;border:1px solid #fcd34d;border-radius:6px;padding:8px 12px;font-size:.78em;color:#78350f;margin:5px 0}
+.ag-rubric summary{cursor:pointer;font-weight:600}
+.ag-cb{background:#fff7ed;border:1px solid #f59e0b;border-radius:6px;padding:7px 10px;font-size:.78em;color:#92400e;margin:5px 0}
+.ag-row{display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap}
+.ag-row label{font-size:.83em;font-weight:600;color:#374151}
+.ag-si{width:72px;border:2px solid #1f4e79;border-radius:6px;padding:4px 8px;font-size:1em;font-weight:700;color:#1f4e79;text-align:center}
+.ag-sm{font-size:.82em;color:#6b7280}
+.ag-pr{display:grid;grid-template-columns:1fr 22px 1fr;gap:6px;align-items:center;padding:3px 0;font-size:.8em}
+.ag-pr.ok{color:#1e5631;font-weight:600}.ag-pr.fail{color:#dc2626}
+.ag-pl{font-weight:600}.ag-pa{text-align:center}
+.ag-gb{background:#f0f7ff;border:1px solid #1f4e79;color:#1f4e79;padding:3px 10px;border-radius:6px;cursor:pointer;font-size:.76em;font-weight:700}
+.ag-gb:hover{background:#1f4e79;color:#fff}
+.ag-badge{font-size:.72em;background:#d5e8d4;color:#1e5631;border-radius:10px;padding:1px 7px;font-weight:700}
+#ag-code-sec{background:linear-gradient(135deg,#1f4e79,#2e75b6);color:#fff;padding:18px 22px;border-radius:10px;text-align:center;margin:14px 0}
+.ag-cv{font-size:2.6em;font-weight:900;letter-spacing:7px;font-family:monospace;background:rgba(255,255,255,.15);border-radius:8px;padding:8px 18px;display:inline-block;margin:6px 0}
+.ag-pre{display:inline-block;background:#fef3c7;color:#92400e;border-radius:20px;padding:3px 12px;font-size:.78em;font-weight:800;margin-bottom:6px}
+.ag-cn{font-size:.8em;opacity:.85;margin:4px 0 0}
+.ag-cf{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:12px 0}
+.ag-ci{border:2px solid #1f4e79;border-radius:8px;padding:10px 12px;font-size:1.4em;letter-spacing:5px;font-family:monospace;width:160px;text-align:center;text-transform:uppercase;font-weight:700}
+.ag-lb{background:#1f4e79;color:#fff;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-weight:700}
+.ag-impbtn{background:#fff;border:1px solid #d97706;color:#d97706;padding:2px 8px;border-radius:4px;cursor:pointer;font-size:.74em;margin:4px 0;display:inline-block}
+</style>
+
+<div id="ag-grade-modal" role="dialog">
+  <div class="ag-mbox">
+    <div class="ag-mhead">
+      <h2 id="ag-mtitle">Calificar examen</h2>
+      <button class="ag-mclose" onclick="agClose()">&#10005;</button>
+    </div>
+    <div class="ag-mbody" id="ag-mbody"></div>
+    <div class="ag-mfoot">
+      <div id="ag-sd" class="ag-sd">Calculando&hellip;</div>
+      <div style="display:flex;gap:8px">
+        <button onclick="agClose()" style="background:#e5e7eb;border:none;padding:9px 16px;border-radius:8px;cursor:pointer;font-weight:600">Cancelar</button>
+        <button class="ag-savebtn" onclick="agSave()">&#128190; Guardar calificaci&#243;n</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script id="ag-grading-js">
+(function(){
+"use strict";
+var RK="exam_results_v1";
+var SU="https://ycjtoorijworrcpuetff.supabase.co";
+var SK="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InljanRvb3JpandvcnJjcHVldGZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0NTU5MTAsImV4cCI6MjA5NDAzMTkxMH0.ZWQUYkuiW8QKYdqVgEqDL18iwfsyYAx1HtcDryT5wTM";
+var GS={idx:-1,scores:{},max:0};
+
+function gSB(){try{return window.supabase.createClient(SU,SK,{auth:{persistSession:false}});}catch(e){return null;}}
+function gR(){return window.loadStore?window.loadStore(RK,[]):[]; }
+function sR(r){if(window.saveStore)window.saveStore(RK,r);}
+
+/* ── CÓDIGO RESULTADO ── */
+function genCode(){
+  var c="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",s="";
+  for(var i=0;i<6;i++) s+=c[Math.floor(Math.random()*c.length)];
+  return s;
+}
+
+var rm=document.getElementById("resultModal");
+if(rm){
+  var mo=new MutationObserver(function(){
+    if(!rm.classList.contains("hidden")) setTimeout(injectCode, 300);
+  });
+  mo.observe(rm,{attributes:true,attributeFilter:["class"]});
+}
+
+function injectCode(){
+  if(document.getElementById("ag-code-sec")) return;
+  var all=gR(); if(!all.length) return;
+  var r=all[all.length-1];
+  if(!r.resultCode){
+    r.resultCode=genCode(); sR(all);
+    var sb=gSB();
+    if(sb&&r._supabaseId) sb.from("resultados").update({resultado_codigo:r.resultCode}).eq("id",r._supabaseId).then(function(){});
   }
+  var target=document.getElementById("resultViewScore");
+  if(!target) return;
+  var sec=document.createElement("div");
+  sec.id="ag-code-sec";
+  sec.className="";
+  sec.style.cssText="background:linear-gradient(135deg,#1f4e79,#2e75b6);color:#fff;padding:18px 22px;border-radius:10px;text-align:center;margin:14px 0";
+  sec.innerHTML="<div class=\"ag-pre\">\u{1F4CB} RESULTADO PRELIMINAR</div>"
+    +"<div style=\"font-size:.88em;opacity:.9;margin-bottom:4px\">Guarda este c\u00F3digo para ver tu calificaci\u00F3n:</div>"
+    +"<div class=\"ag-cv\">"+r.resultCode+"</div>"
+    +"<p class=\"ag-cn\">\u{1F4CC} An\u00F3talo o toma una foto.<br>La calificaci\u00F3n final ser\u00E1 asignada cuando tu profesor lo indique.</p>";
+  var ref=target.querySelector(".center[style]")||target.querySelector(".btn")||target.lastElementChild;
+  if(ref) target.insertBefore(sec,ref); else target.appendChild(sec);
+}
+
+/* ── VER RESULTADO CON CÓDIGO ── */
+window.addEventListener("load",function(){
+  var sl=document.getElementById("studentLogin");
+  if(sl){
+    var d=document.createElement("div");
+    d.style.cssText="text-align:center;margin-top:10px";
+    d.innerHTML="<button onclick=\"agShowLookup()\" style=\"background:none;border:none;color:#6b7280;cursor:pointer;font-size:.85em;text-decoration:underline\">\u{1F4CB} Ver resultado con mi c\u00F3digo</button>";
+    sl.insertAdjacentElement("afterend",d);
+  }
+  setTimeout(patchRR, 800);
 });
-</script><script>
-window.addEventListener("load", function(){
-  var SU="https://ycjtoorijworrcpuetff.supabase.co",SK="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InljanRvb3JpandvcnJjcHVldGZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0NTU5MTAsImV4cCI6MjA5NDAzMTkxMH0.ZWQUYkuiW8QKYdqVgEqDL18iwfsyYAx1HtcDryT5wTM";
-  function gSE(){try{return window.supabase.createClient(SU,SK,{auth:{persistSession:false}});}catch(e){return null;}}
 
-  async function uploadExamsToSupabase(exams){
-    var s=gSE();if(!s)return;
-    var a=window.getActiveExamId?window.getActiveExamId():"default";
-    for(var id in exams){
-      try{await s.from("examenes").upsert({exam_id:id,titulo:exams[id].title||"Examen",contenido:exams[id],activo:id===a,actualizado:new Date().toISOString()},{onConflict:"exam_id"});}
-      catch(e){console.warn("uploadExam:",e.message);}
-    }
-  }
-
-  async function deleteExamFromSupabase(id){
-    var s=gSE();if(!s)return;
-    try{await s.from("examenes").delete().eq("exam_id",id);}
-    catch(e){console.warn("deleteExam:",e.message);}
-  }
-
-  // Parchear setExams para auto-sincronizar con debounce
-  var origSetExams=window.setExams;
-  var _debounce=null;
-  if(origSetExams&&!origSetExams._ep){
-    window.setExams=function(exams){
-      if(origSetExams)origSetExams.call(window,exams);
-      clearTimeout(_debounce);
-      _debounce=setTimeout(function(){uploadExamsToSupabase(exams);},2000);
-    };
-    window.setExams._ep=true;
-  }
-
-  // Parchear deleteExam para borrar de Supabase
-  var origDelExam=window.deleteExam;
-  if(origDelExam&&!origDelExam._ep){
-    window.deleteExam=function(id){
-      deleteExamFromSupabase(id);
-      if(origDelExam)origDelExam.call(window,id);
-    };
-    window.deleteExam._ep=true;
-  }
-});
-</script><script>
-window.addEventListener("load", function(){
-  var SU="https://ycjtoorijworrcpuetff.supabase.co",SK="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InljanRvb3JpandvcnJjcHVldGZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0NTU5MTAsImV4cCI6MjA5NDAzMTkxMH0.ZWQUYkuiW8QKYdqVgEqDL18iwfsyYAx1HtcDryT5wTM";
-  function gSX(){try{return window.supabase.createClient(SU,SK,{auth:{persistSession:false}});}catch(e){return null;}}
-
-  async function uploadExams(exams){
-    var s=gSX();if(!s||!exams)return;
-    var a=window.getActiveExamId?window.getActiveExamId():"default";
-    for(var id in exams){
-      try{await s.from("examenes").upsert({exam_id:id,titulo:exams[id].title||"Examen",contenido:exams[id],activo:id===a,actualizado:new Date().toISOString()},{onConflict:"exam_id"});}
-      catch(e){console.warn("uploadExam:",e.message);}
-    }
-    if(window.showToast)window.showToast("Examen guardado en la nube","success",2000);
-  }
-
-  async function deleteExamCloud(id){
-    var s=gSX();if(!s)return;
-    try{await s.from("examenes").delete().eq("exam_id",id);}
-    catch(e){console.warn("deleteExamCloud:",e.message);}
-  }
-
-  // Interceptar DB.set — funciona desde cualquier parte del código
-  if(window.DB&&!window.DB._examPatched){
-    var origSet=window.DB.set.bind(window.DB);
-    var _dt=null;
-    window.DB.set=function(key,val){
-      origSet(key,val);
-      if(key==="exam_exams_v1"){
-        clearTimeout(_dt);
-        _dt=setTimeout(function(){uploadExams(val);},1500);
-      }
-    };
-    window.DB._examPatched=true;
-  }
-
-  // Interceptar deleteExam para borrar de Supabase
-  var origDel=window.deleteExam;
-  if(origDel&&!origDel._ep2){
-    window.deleteExam=function(id){
-      deleteExamCloud(id);
-      if(origDel)origDel.call(window,id);
-    };
-    window.deleteExam._ep2=true;
-  }
-});
-</script><script>
-window.syncExamsFromSupabase = async function(){
-  if(window._exSyncing) return;
-  window._exSyncing = true;
-  var SU="https://ycjtoorijworrcpuetff.supabase.co";
-  var SK="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InljanRvb3JpandvcnJjcHVldGZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0NTU5MTAsImV4cCI6MjA5NDAzMTkxMH0.ZWQUYkuiW8QKYdqVgEqDL18iwfsyYAx1HtcDryT5wTM";
-  try {
-    var s = window.supabase.createClient(SU,SK,{auth:{persistSession:false}});
-    var r = await s.from("examenes").select("*");
-    if (!r.error && r.data && r.data.length) {
-      var e = window.getExams ? window.getExams() : {};
-      r.data.forEach(function(x){ if(x.contenido) e[x.exam_id] = x.contenido; });
-      if(window.saveStore) window.saveStore("exam_exams_v1", e);
-      // Solo refrescar la UI si el usuario ya está en la pestaña de exámenes
-      var activeTab = document.querySelector(".admin-tab.active");
-      if(activeTab && activeTab.getAttribute("data-tab") === "exams") {
-        if(window.switchAdminTab) window.switchAdminTab("exams");
-      }
-    }
-  } catch(e){ console.warn("syncExams:", e.message); }
-  window._exSyncing = false;
+window.agCloseLookup=function(){
+  var m=document.getElementById("ag-lookup-modal");
+  if(m) m.style.display="none";
 };
-</script></body>
+
+window.agShowLookup=function(){
+  var m=document.getElementById("ag-lookup-modal");
+  if(!m){
+    m=document.createElement("div");
+    m.id="ag-lookup-modal";
+    m.style.cssText="display:flex;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;align-items:center;justify-content:center;padding:20px";
+    m.innerHTML="<div style=\"background:#fff;border-radius:14px;padding:28px;max-width:560px;width:100%;box-shadow:0 8px 40px rgba(0,0,0,.3);max-height:90vh;overflow-y:auto\">"
+      +"<div style=\"display:flex;justify-content:space-between;align-items:center;margin-bottom:16px\">"
+      +"<h2 style=\"margin:0;color:#1f4e79;font-size:1.15em\">\u{1F4CB} Ver mi resultado</h2>"
+      +"<button onclick=\"agCloseLookup()\" style=\"background:#e5e7eb;border:none;border-radius:50%;width:30px;height:30px;cursor:pointer;font-size:16px\">&#10005;</button>"
+      +"</div>"
+      +"<p style=\"color:#6b7280;font-size:.88em;margin-bottom:12px\">Ingresa el c\u00F3digo de 6 caracteres que recibiste al terminar:</p>"
+      +"<div class=\"ag-cf\">"
+      +"<input class=\"ag-ci\" id=\"ag-ci\" maxlength=\"6\" placeholder=\"ABC123\" oninput=\"this.value=this.value.toUpperCase()\">"
+      +"<button class=\"ag-lb\" onclick=\"agLookup()\">Buscar &#8594;</button>"
+      +"</div>"
+      +"<div id=\"ag-lr\" style=\"margin-top:14px\"></div>"
+      +"</div>";
+    document.body.appendChild(m);
+  } else { m.style.display="flex"; }
+};
+
+window.agLookup=async function(){
+  var code=(document.getElementById("ag-ci").value||"").trim().toUpperCase();
+  var el=document.getElementById("ag-lr");
+  if(code.length!==6){el.innerHTML="<p style=\"color:#dc2626;font-size:.85em\">El c\u00F3digo debe tener 6 caracteres.</p>";return;}
+  el.innerHTML="<p style=\"color:#6b7280;font-size:.85em\">Buscando&hellip;</p>";
+  var all=gR(), r=all.find(function(x){return x.resultCode===code;});
+  if(!r){
+    var sb=gSB();
+    if(sb){
+      var qr=await sb.from("resultados").select("*").eq("resultado_codigo",code).limit(1);
+      if(qr.data&&qr.data.length){
+        var d=qr.data[0];
+        r={student:d.alumno,studentCode:d.codigo,examId:d.examen_id,examTitle:d.examen_titulo,
+           startedAt:d.inicio,finishedAt:d.fin,scoreMC:d.puntos_mc,maxMC:d.max_mc,
+           scoreTotal:d.total,answers:d.respuestas,resultCode:d.resultado_codigo,
+           gradedByTeacher:d.calificado,contestaciones:d.contestaciones,_supabaseId:d.id};
+      }
+    }
+  }
+  if(!r){el.innerHTML="<p style=\"color:#dc2626;font-size:.85em\">\u274C C\u00F3digo no encontrado. Verifica o espera sincronizaci\u00F3n.</p>";return;}
+  renderSR(el,r,all);
+};
+
+function renderSR(el,r,all){
+  var scored=r.scoreTotal||r.scoreMC||0;
+  var pass=(window.state&&window.state.config&&window.state.config.pass)||70;
+  var ok=scored>=pass, isGraded=r.gradedByTeacher;
+  var exams=window.getExams?window.getExams():{};
+  var exam=r.examId?exams[r.examId]:null;
+  var html="<div style=\"border:1px solid #e2e8f0;border-radius:10px;overflow:hidden\">"
+    +"<div style=\"background:"+(ok?"#d5e8d4":"#fee2e2")+";padding:14px 18px\">"
+    +"<div class=\"ag-pre\">"+(isGraded?"\u2705 CALIFICADO":"\u23F3 PRELIMINAR")+"</div>"
+    +"<div style=\"font-weight:700;margin-top:5px\">"+(r.student||"")+" &mdash; "+(r.examTitle||"Examen")+"</div>"
+    +"<div style=\"font-size:2.2em;font-weight:900;color:"+(ok?"#1e5631":"#dc2626")+"\">"+scored+"<span style=\"font-size:.4em;color:#6b7280\">/100</span></div>"
+    +(isGraded?"":"<p style=\"font-size:.78em;color:#6b7280;margin:3px 0\">\u23F3 Resultado preliminar &mdash; espera indicaci\u00F3n del profesor.</p>")
+    +"</div><div style=\"padding:16px\">";
+  if(exam&&r.answers){
+    html+="<div style=\"font-size:.82em;font-weight:700;color:#374151;margin-bottom:8px\">TUS RESPUESTAS:</div>";
+    var qn=1;
+    (exam.sections||[]).forEach(function(sec){
+      html+="<div style=\"font-weight:700;color:#1f4e79;font-size:.78em;margin:8px 0 5px\">"+sec.name+"</div>";
+      (sec.questions||[]).forEach(function(q){
+        var ans=r.answers[q.id];
+        var contested=r.contestaciones&&r.contestaciones[q.id];
+        html+="<div style=\"background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:10px;margin-bottom:6px\">"
+          +"<div style=\"font-size:.75em;color:#9ca3af\">P"+qn+" ("+q.points+" pts)</div>"
+          +"<div style=\"font-size:.83em;margin:4px 0 6px;line-height:1.4\">"+q.text+"</div>";
+        if(q.type==="mc"){
+          html+="<div>";
+          (q.options||[]).forEach(function(opt,oi){
+            var sel=ans===oi;
+            html+="<div style=\"padding:2px 6px;border-radius:4px;font-size:.8em;"+(sel?"background:#dbeafe;font-weight:700":"")+"\">"+String.fromCharCode(65+oi)+". "+opt+(sel?" <b style=\"color:#1f4e79\">\u25C4 tu respuesta</b>":"")+"</div>";
+          });
+          html+="</div>";
+        } else if(q.type==="open"){
+          html+="<div style=\"background:#fff;border:1px solid #d1d5db;border-radius:6px;padding:8px;font-size:.8em;white-space:pre-wrap\">"+(ans||"<em>Sin respuesta</em>")+"</div>";
+        } else if(q.type==="match"){
+          var ma=(typeof ans==="object"&&ans)?ans:{};
+          html+="<div style=\"font-size:.8em\">";
+          (q.pairs||[]).forEach(function(p){html+="<div><b style=\"color:#1f4e79\">"+p.left+"</b> &rarr; "+(ma[p.left]||"<em>Sin resp.</em>")+"</div>";});
+          html+="</div>";
+        }
+        if(!isGraded&&!contested){
+          // Use data attributes to avoid quote issues
+          html+="<button class=\"ag-impbtn\" data-code=\""+(r.resultCode||"")+"\" data-qid=\""+q.id+"\" onclick=\"agContest(this)\">Impugnar esta pregunta</button>";
+        } else if(contested){
+          html+="<div class=\"ag-cb\">\u{1F4EC} Impugnaci\u00F3n enviada: "+contested+"</div>";
+        }
+        html+="</div>"; qn++;
+      });
+    });
+  } else {
+    html+="<p style=\"color:#6b7280;font-size:.85em\">Las respuestas detalladas estar\u00E1n disponibles cuando tu profesor libere los resultados.</p>";
+  }
+  html+="</div></div>";
+  el.innerHTML=html;
+}
+
+window.agContest=function(btn){
+  var code=btn.dataset.code, qId=btn.dataset.qid;
+  var reason=prompt("Explica por qu\u00E9 crees que tu respuesta es correcta:");
+  if(!reason||!reason.trim()) return;
+  var all=gR(), idx=all.findIndex(function(x){return x.resultCode===code;});
+  if(idx>=0){
+    if(!all[idx].contestaciones) all[idx].contestaciones={};
+    all[idx].contestaciones[qId]=reason.trim();
+    sR(all);
+    var sb=gSB();
+    if(sb&&all[idx]._supabaseId) sb.from("resultados").update({contestaciones:all[idx].contestaciones}).eq("id",all[idx]._supabaseId).then(function(){});
+  }
+  var div=document.createElement("div");
+  div.className="ag-cb";
+  div.textContent="\u{1F4EC} Impugnaci\u00F3n enviada: "+reason.trim();
+  btn.replaceWith(div);
+  if(window.showToast) window.showToast("Impugnaci\u00F3n registrada","success",2500);
+};
+
+/* ── MODAL CALIFICACIÓN DOCENTE ── */
+function patchRR(){
+  var orig=window.renderResults;
+  if(!orig||orig._ag) return;
+  window.renderResults=function(){
+    orig.apply(this,arguments);
+    setTimeout(addGBtns,120);
+  };
+  window.renderResults._ag=true;
+}
+
+function addGBtns(){
+  var box=document.getElementById("resultsBox"); if(!box) return;
+  var rows=box.querySelectorAll("tbody tr"), all=gR();
+  var thead=box.querySelector("thead tr");
+  if(thead&&!thead.querySelector(".ag-gth")){
+    var th=document.createElement("th");
+    th.className="ag-gth"; th.textContent="Calificar"; thead.appendChild(th);
+  }
+  rows.forEach(function(row,i){
+    if(i>=all.length) return;
+    var r=all[i];
+    row.querySelectorAll(".ag-gtd").forEach(function(el){el.remove();});
+    var td=document.createElement("td"); td.className="ag-gtd";
+    var hasImp=r.contestaciones&&Object.keys(r.contestaciones).length>0;
+    if(r.gradedByTeacher){
+      td.innerHTML="<span class=\"ag-badge\">\u2713 Calificado</span><br>"
+        +"<button class=\"ag-gb\" style=\"margin-top:3px\" data-idx=\""+i+"\" onclick=\"agOpen(parseInt(this.dataset.idx))\">&#9998; Editar</button>";
+    } else {
+      td.innerHTML=(hasImp?"<span style=\"font-size:.7em;color:#d97706;font-weight:700\">\u26A0 Impugnaci\u00F3n</span><br>":"")
+        +"<button class=\"ag-gb\" data-idx=\""+i+"\" onclick=\"agOpen(parseInt(this.dataset.idx))\">\u{1F4DD} Calificar</button>";
+    }
+    row.appendChild(td);
+  });
+}
+
+window.agOpen=function(idx){
+  var all=gR(), r=all[idx]; if(!r) return;
+  var exams=window.getExams?window.getExams():{};
+  var exam=exams[r.examId];
+  GS={idx:idx,scores:{},max:0};
+  document.getElementById("ag-mtitle").textContent="\u{1F4DD} "+r.student+" \u2014 "+(r.examTitle||"Examen");
+  var body=document.getElementById("ag-mbody"); body.innerHTML="";
+  if(!exam){
+    body.innerHTML="<p style=\"color:#dc2626;padding:16px\">\u26A0 El examen no est\u00E1 en este dispositivo. Usa Sincronizar Ex\u00E1menes primero.</p>";
+    document.getElementById("ag-grade-modal").style.display="flex"; return;
+  }
+  var total=0;
+  (exam.sections||[]).forEach(function(sec,si){
+    var sd=document.createElement("div");
+    sd.innerHTML="<div class=\"ag-stitle\">Secci\u00F3n "+(sec.id||si+1)+": "+sec.name+"</div>";
+    (sec.questions||[]).forEach(function(q,qi){
+      var pts=q.points||0; GS.max+=pts;
+      var ans=r.answers?r.answers[q.id]:undefined;
+      var ms=r.manualScores?r.manualScores[q.id]:undefined;
+      var earned=0, ch="";
+      if(q.type==="mc"){
+        earned=(ans===q.correct)?pts:0; GS.scores[q.id]=earned; total+=earned;
+        var opts=(q.options||[]).map(function(opt,oi){
+          var sel=ans===oi,ok=q.correct===oi;
+          var cls=sel&&ok?"ok":sel&&!ok?"bad sel":"sel"===false?"":(ok?"ok":"");
+          if(sel&&ok) cls="ok";
+          else if(sel&&!ok) cls="bad";
+          else if(ok) cls="ok";
+          else cls="";
+          var icon=sel&&ok?"\u2713":sel&&!ok?"\u2717":ok?"\u2713":String.fromCharCode(65+oi);
+          return "<div class=\"ag-opt "+cls+"\"><span class=\"ag-oi\">"+icon+"</span><span>"+opt+(ok?" <b style=\"color:#1e5631\">(correcta)</b>":"")+"</span></div>";
+        }).join("");
+        ch="<div class=\"ag-qc "+(earned>0?"vc":"vw")+"\">"
+          +"<div class=\"ag-qh\"><span class=\"ag-qn\">P"+(qi+1)+" &bull; Opci\u00F3n M\u00FAltiple</span><span class=\"ag-qs\">"+earned+"/"+pts+" pts</span></div>"
+          +"<p class=\"ag-qt\">"+q.text+"</p><div>"+opts+"</div>"
+          +(ans===undefined?"<p style=\"font-size:.82em;color:#9ca3af;font-style:italic\">Sin respuesta</p>":"")+"</div>";
+      } else if(q.type==="open"){
+        earned=ms!==undefined?ms:0; GS.scores[q.id]=earned; total+=earned;
+        var contest=r.contestaciones&&r.contestaciones[q.id]?"<div class=\"ag-cb\">\u26A0 Alumno impugna: &ldquo;"+r.contestaciones[q.id]+"&rdquo;</div>":"";
+        var rubric=q.rubric?"<details class=\"ag-rubric\"><summary>\u{1F4CC} Criterios</summary><p>"+q.rubric+"</p></details>":"";
+        ch="<div class=\"ag-qc vo\">"
+          +"<div class=\"ag-qh\"><span class=\"ag-qn\">P"+(qi+1)+" &bull; ABIERTA</span><span class=\"ag-qs\" id=\"agS-"+q.id+"\">"+earned+"/"+pts+" pts</span></div>"
+          +"<p class=\"ag-qt\">"+q.text+"</p>"
+          +"<div style=\"font-size:.78em;font-weight:600;color:#6b7280;margin-bottom:3px\">Respuesta del alumno:</div>"
+          +"<div class=\"ag-sa\">"+(ans||"<em style=\"color:#9ca3af\">Sin respuesta</em>")+"</div>"
+          +rubric+contest
+          +"<div class=\"ag-row\"><label>Calificaci\u00F3n:</label>"
+          +"<input class=\"ag-si\" type=\"number\" min=\"0\" max=\""+pts+"\" value=\""+earned+"\" data-qid=\""+q.id+"\" data-max=\""+pts+"\" oninput=\"agUpd(this)\">"
+          +"<span class=\"ag-sm\">/ "+pts+" pts</span>"
+          +"<span style=\"font-size:.75em;color:#9ca3af\">(0=sin resp / "+pts+"=perfecta)</span></div></div>";
+      } else if(q.type==="match"){
+        var ma=(typeof ans==="object"&&ans)?ans:{};
+        var correct=0, tp=(q.pairs||[]).length;
+        var ph=(q.pairs||[]).map(function(p){
+          var sa=ma[p.left], ok2=sa===p.right; if(ok2) correct++;
+          return "<div class=\"ag-pr "+(ok2?"ok":"fail")+"\">"
+            +"<div class=\"ag-pl\">"+p.left+"</div><div class=\"ag-pa\">"+(ok2?"\u2713":"\u2717")+"</div>"
+            +"<div>"+(sa||"<em>Sin resp.</em>")+((!ok2&&p.right)?" <small style=\"color:#6b7280\">(correcto: "+p.right+")</small>":"")+"</div></div>";
+        }).join("");
+        var autoS=tp>0?Math.round(pts*correct/tp):0;
+        earned=ms!==undefined?ms:autoS; GS.scores[q.id]=earned; total+=earned;
+        var contest2=r.contestaciones&&r.contestaciones[q.id]?"<div class=\"ag-cb\">\u26A0 Alumno impugna: &ldquo;"+r.contestaciones[q.id]+"&rdquo;</div>":"";
+        ch="<div class=\"ag-qc vm\">"
+          +"<div class=\"ag-qh\"><span class=\"ag-qn\">P"+(qi+1)+" &bull; Relaci\u00F3n Columnas</span><span class=\"ag-qs\" id=\"agS-"+q.id+"\">"+earned+"/"+pts+" pts</span></div>"
+          +"<p class=\"ag-qt\">"+q.text+"</p><div style=\"margin:8px 0\">"+ph+"</div>"+contest2
+          +"<div class=\"ag-row\"><label>Auto: "+autoS+"/"+pts+" | Ajustar:</label>"
+          +"<input class=\"ag-si\" type=\"number\" min=\"0\" max=\""+pts+"\" value=\""+earned+"\" data-qid=\""+q.id+"\" data-max=\""+pts+"\" oninput=\"agUpd(this)\">"
+          +"<span class=\"ag-sm\">/ "+pts+" pts</span></div></div>";
+      }
+      sd.innerHTML+=ch;
+    });
+    body.appendChild(sd);
+  });
+  agDisp(total);
+  document.getElementById("ag-grade-modal").style.display="flex";
+};
+
+window.agUpd=function(inp){
+  var qId=inp.dataset.qid, maxPts=parseInt(inp.dataset.max)||0;
+  var s=Math.max(0,Math.min(maxPts,parseFloat(inp.value)||0));
+  GS.scores[qId]=s;
+  var d=document.getElementById("agS-"+qId);
+  if(d) d.textContent=s+"/"+maxPts+" pts";
+  agDisp(Object.values(GS.scores).reduce(function(a,b){return a+b;},0));
+};
+
+function agDisp(tot){
+  var n=GS.max>0?Math.round(tot/GS.max*100):tot;
+  var col=n>=70?"#1e5631":"#dc2626";
+  document.getElementById("ag-sd").innerHTML="Puntos: <b>"+tot.toFixed(1)+"/"+GS.max+"</b> &nbsp;|&nbsp; "
+    +"Calificaci\u00F3n: <b class=\"ag-sbig\" style=\"color:"+col+"\">"+n+" / 100</b>";
+}
+
+window.agSave=function(){
+  if(GS.idx<0) return;
+  var all=gR(), r=all[GS.idx]; if(!r) return;
+  var tot=Object.values(GS.scores).reduce(function(a,b){return a+b;},0);
+  var norm=GS.max>0?Math.round(tot/GS.max*100):tot;
+  r.manualScores=Object.assign({},GS.scores);
+  r.scoreMC=tot; r.maxMC=GS.max; r.scoreTotal=norm;
+  r.gradedByTeacher=true; r.gradedAt=new Date().toISOString();
+  all[GS.idx]=r; sR(all);
+  var sb=gSB();
+  if(sb&&r._supabaseId){
+    sb.from("resultados").update({puntos_mc:tot,max_mc:GS.max,total:norm,calificado:true,calificado_en:r.gradedAt}).eq("id",r._supabaseId).then(function(){});
+  }
+  if(window.showToast) window.showToast("Calificaci\u00F3n guardada: "+norm+"/100","success",3000);
+  agClose();
+  if(window.renderResults) window.renderResults();
+};
+
+window.agClose=function(){
+  document.getElementById("ag-grade-modal").style.display="none";
+  GS={idx:-1,scores:{},max:0};
+};
+document.getElementById("ag-grade-modal").addEventListener("click",function(e){if(e.target===this)agClose();});
+
+})();
+</script>
+</body>
 </html>
-
-
-
-
-
