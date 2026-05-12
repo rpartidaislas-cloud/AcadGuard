@@ -934,6 +934,7 @@ CREATE TABLE resultados (
   max_mc         integer DEFAULT 0,
   total          integer DEFAULT 0,
   retroalimentacion jsonb,
+  retroalimentacion_docente jsonb,
   integridad     text
 );
 
@@ -3423,6 +3424,10 @@ function renderBankVisual() {
 function renderQuestionEditorBody(q, si, qi) {
   if (q.type === 'mc' || q.type === 'calc') {
     let h = `<div class="qe-options">`;
+    h += `<label style="display:flex;align-items:flex-start;gap:8px;background:#fff7ed;border:1px solid #fdba74;border-radius:6px;padding:8px 10px;margin:4px 0 10px;font-size:13px;cursor:pointer">
+      <input type="checkbox" ${q.requiresReview ? 'checked' : ''} onchange="editQuestionRequiresReview(${si},${qi},this.checked)" style="margin-top:3px">
+      <span><b>🔍 Requiere revisión de procedimiento</b><br><small style="color:#92400e">Inicia en 0 pts aunque el alumno marque la opción correcta. El docente debe revisar el procedimiento para otorgar puntos.</small></span>
+    </label>`;
     h += `<p class="muted" style="font-size:12px;margin:4px 0">Marca la opción correcta con el círculo de la izquierda:</p>`;
     (q.options || []).forEach((opt, oi) => {
       h += `<div class="qe-option">
@@ -3574,6 +3579,7 @@ function editQuestionType(si, qi, val) {
   renderBankVisual();
 }
 function editQuestionCorrect(si, qi, oi) { _bank().sections[si].questions[qi].correct = oi; }
+function editQuestionRequiresReview(si, qi, val) { _bank().sections[si].questions[qi].requiresReview = !!val; _persistBank(); }
 function editQuestionOption(si, qi, oi, val) { _bank().sections[si].questions[qi].options[oi] = val; }
 function addQuestionOption(si, qi) {
   const q = _bank().sections[si].questions[qi];
@@ -4261,6 +4267,17 @@ function startStudentSession(name) {
   const examStart = scheduled;
   const effectiveStart = (examStart && examStart < Date.now()) ? examStart : Date.now();
 
+  // Guard: si la hora de inicio programada ya pasó Y el tiempo del examen ya se agotó,
+  // bloquear antes de crear la sesión (evita timer con remaining < 0 → submit inmediato).
+  const durationMs = (state.config.minutes || 120) * 60 * 1000;
+  if (examStart && (effectiveStart + durationMs) <= Date.now()) {
+    alert("⏰ El tiempo del examen ya expiró.\n\n" +
+      "Estaba programado para iniciar el " + new Date(examStart).toLocaleString() +
+      " con duración de " + (state.config.minutes || 120) + " minutos.\n\n" +
+      "Contacta a tu docente para que configure un horario de reposición.");
+    return;
+  }
+
   state.session = {
     student: name,
     startedAt: effectiveStart,
@@ -4278,6 +4295,7 @@ function startStudentSession(name) {
     cleanExit: false
   };
   state.warnCount = 0;
+  state.session.savedWarnCount = 0;  // persiste el contador real en la sesión
   // Mostrar mensaje informativo si llegó tarde al examen agendado
   if (examStart && Date.now() > examStart) {
     const lateMin = Math.floor((Date.now() - examStart) / 60000);
@@ -4292,7 +4310,12 @@ function startStudentSession(name) {
 }
 
 function resumeStudentSession() {
-  state.warnCount = (state.session.alerts || []).length;
+  // Restaurar el contador real de alertas (guardado en savedWarnCount).
+  // NUNCA usar session.alerts.length: incluye eventos informativos y no refleja
+  // el warnPenalty acumulado real.
+  state.warnCount = state.session.savedWarnCount != null
+    ? state.session.savedWarnCount
+    : (state.session.alerts || []).filter(a => a.level === 'warn').length;
   renderStudent();
 }
 
@@ -4472,9 +4495,15 @@ function renderMatchQuestion(q) {
   html += `</div>`;
   // Right column: pool of draggables
   html += `<div class="match-col match-pool" data-qid="${q.id}"><h4>🔘 Opciones (arrastra)</h4>`;
-  const usedRights = new Set(Object.values(ans));
+  // Contar cuántas veces se ha usado cada valor en las respuestas actuales
+  const usedCount = {};
+  Object.values(ans).forEach(v => { usedCount[v] = (usedCount[v] || 0) + 1; });
+  // Renderizar UNA instancia por par (permite duplicados). Marcar como placed las primeras N instancias
+  // de cada valor donde N = veces que se ha usado.
+  const renderedCount = {};
   shuffled.forEach((val, i) => {
-    const placed = usedRights.has(val);
+    renderedCount[val] = (renderedCount[val] || 0) + 1;
+    const placed = renderedCount[val] <= (usedCount[val] || 0);
     html += `<div class="draggable ${placed ? 'placed' : ''}" draggable="true" data-value="${escapeHTML(val)}"
                   ondragstart="matchDragStart(event)" ondragend="matchDragEnd(event)">${escapeHTML(val)}</div>`;
   });
@@ -4521,10 +4550,9 @@ function matchDrop(ev) {
   const qid = ev.currentTarget.dataset.qid;
   const left = ev.currentTarget.dataset.left;
   if (!state.session.answers[qid]) state.session.answers[qid] = {};
-  // Si este 'value' ya estaba asignado a otra fila, quitarlo de allí
-  for (const k of Object.keys(state.session.answers[qid])) {
-    if (state.session.answers[qid][k] === value) delete state.session.answers[qid][k];
-  }
+  // Asignar (o sobrescribir) el slot destino. NO eliminar el mismo valor de otras filas:
+  // si un concepto se relaciona con el mismo valor en varios pares (duplicados intencionales),
+  // la disponibilidad se controla por el pool de opciones (instancias por par).
   state.session.answers[qid][left] = value;
   saveCurrentSession();
   renderQuestions();
@@ -4586,10 +4614,11 @@ function startTimer() {
   state.timerId = setInterval(tick, 500);
 }
 function tick() {
+  if (!state.session || state.session.finished) return;  // no disparar si ya terminó
   const remaining = state.endsAt - Date.now();
   const el = document.getElementById('timerDisplay');
   if (remaining <= 0) {
-    el.textContent = "00:00";
+    if (el) el.textContent = "00:00";
     submitExam('timeout');
     return;
   }
@@ -4843,6 +4872,8 @@ function applyWarnPenalty() {
   if (!state.session || state.session.finished) return;
   const penalty = state.config.warnPenalty != null ? state.config.warnPenalty : 1;
   state.warnCount = (state.warnCount || 0) + penalty;
+  // Persistir en la sesión para que un reingreso restaure el valor correcto
+  if (state.session) state.session.savedWarnCount = state.warnCount;
   // Refrescar UI del modal
   const cntEl = document.getElementById('warnCount');
   if (cntEl) cntEl.textContent = state.warnCount;
@@ -5010,10 +5041,20 @@ function submitExam(reason) {
 
   // Auto-grade MC and match
   let scoreMC = 0, maxMC = 0;
+  const pendingReview = [];  // IDs de preguntas MC con requiresReview (pendientes de revisión docente)
   state.bank.sections.forEach(sec => sec.questions.forEach(q => {
     if (q.type === 'mc' || q.type === 'calc') {
       maxMC += q.points;
-      if (state.session.answers[q.id] === q.correct) scoreMC += q.points;
+      if (q.requiresReview) {
+        // Regla 1/3 + 2/3: si elige la correcta, gana automáticamente 1/3 de los puntos.
+        // Los 2/3 restantes quedan pendientes hasta que el docente revise el procedimiento.
+        pendingReview.push(q.id);
+        if (state.session.answers[q.id] === q.correct) {
+          scoreMC += Math.round(q.points / 3);
+        }
+      } else if (state.session.answers[q.id] === q.correct) {
+        scoreMC += q.points;
+      }
     } else if (q.type === 'match') {
       maxMC += q.points;
       const ans = state.session.answers[q.id] || {};
@@ -5048,7 +5089,8 @@ function submitExam(reason) {
     bonusEarned: bonusEarned,
     scoreMC,
     maxMC,
-    scoreTotal: scoreTotal
+    scoreTotal: scoreTotal,
+    pendingReview: pendingReview
   };
 
   // Calcular hash de integridad (SHA-256) para detectar tampering posterior
@@ -9377,7 +9419,9 @@ function loadSupabaseConfigUI() {
 var RK="exam_results_v1";
 var SU="https://ycjtoorijworrcpuetff.supabase.co";
 var SK="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InljanRvb3JpandvcnJjcHVldGZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0NTU5MTAsImV4cCI6MjA5NDAzMTkxMH0.ZWQUYkuiW8QKYdqVgEqDL18iwfsyYAx1HtcDryT5wTM";
-var GS={idx:-1,scores:{},max:0};
+var GS={idx:-1,scores:{},max:0,feedback:{}};
+
+function escTA(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
 
 function gSB(){try{return window.supabase.createClient(SU,SK,{auth:{persistSession:false}});}catch(e){return null;}}
 function gR(){return window.loadStore?window.loadStore(RK,[]):[]; }
@@ -9475,7 +9519,8 @@ window.agLookup=async function(){
         r={student:d.alumno,studentCode:d.codigo,examId:d.examen_id,examTitle:d.examen_titulo,
            startedAt:d.inicio,finishedAt:d.fin,scoreMC:d.puntos_mc,maxMC:d.max_mc,
            scoreTotal:d.total,answers:d.respuestas,resultCode:d.resultado_codigo,
-           gradedByTeacher:d.calificado,contestaciones:d.contestaciones,_supabaseId:d.id};
+           gradedByTeacher:d.calificado,contestaciones:d.contestaciones,
+           teacherFeedback:d.retroalimentacion_docente||{},_supabaseId:d.id};
       }
     }
   }
@@ -9527,6 +9572,10 @@ function renderSR(el,r,all){
           html+="<button class=\"ag-impbtn\" data-code=\""+(r.resultCode||"")+"\" data-qid=\""+q.id+"\" onclick=\"agContest(this)\">Impugnar esta pregunta</button>";
         } else if(contested){
           html+="<div class=\"ag-cb\">\u{1F4EC} Impugnaci\u00F3n enviada: "+contested+"</div>";
+        }
+        // Retroalimentación del docente (visible solo si ya calificó)
+        if(isGraded && r.teacherFeedback && r.teacherFeedback[q.id]){
+          html+="<div style=\"background:#eff6ff;border:1px solid #93c5fd;border-radius:6px;padding:8px 10px;font-size:.8em;color:#1e3a8a;margin:6px 0;white-space:pre-wrap\"><b>\u{1F4AC} Retroalimentaci\u00F3n del profesor:</b><br>"+r.teacherFeedback[q.id]+"</div>";
         }
         html+="</div>"; qn++;
       });
@@ -9597,7 +9646,7 @@ window.agOpen=function(idx){
   var all=gR(), r=all[idx]; if(!r) return;
   var exams=window.getExams?window.getExams():{};
   var exam=exams[r.examId];
-  GS={idx:idx,scores:{},max:0};
+  GS={idx:idx,scores:{},max:0,feedback:Object.assign({},r.teacherFeedback||{})};
   document.getElementById("ag-mtitle").textContent="\u{1F4DD} "+r.student+" \u2014 "+(r.examTitle||"Examen");
   var body=document.getElementById("ag-mbody"); body.innerHTML="";
   if(!exam){
@@ -9614,25 +9663,60 @@ window.agOpen=function(idx){
       var ms=r.manualScores?r.manualScores[q.id]:undefined;
       var earned=0, ch="";
       if(q.type==="mc"){
-        earned=(ans===q.correct)?pts:0; GS.scores[q.id]=earned; total+=earned;
+        var isMcReview=!!q.requiresReview;
+        var autoMax=isMcReview?Math.round(pts/3):pts;  // 1/3 automático
+        var manualMax=isMcReview?(pts-autoMax):0;       // 2/3 procedimiento
+        var autoEarned=isMcReview?((ans===q.correct)?autoMax:0):((ans===q.correct)?pts:0);
+        if(isMcReview){
+          // ms guarda el TOTAL (auto + manual). Derivamos manual = ms - autoEarned
+          var manualSaved=ms!==undefined?Math.max(0,Math.min(manualMax,ms-autoEarned)):0;
+          earned=autoEarned+manualSaved;
+        } else {
+          earned=autoEarned;  // = pts si correcto, 0 si no
+        }
+        GS.scores[q.id]=earned; total+=earned;
         var opts=(q.options||[]).map(function(opt,oi){
           var sel=ans===oi,ok=q.correct===oi;
-          var cls=sel&&ok?"ok":sel&&!ok?"bad sel":"sel"===false?"":(ok?"ok":"");
+          var cls="";
           if(sel&&ok) cls="ok";
           else if(sel&&!ok) cls="bad";
           else if(ok) cls="ok";
-          else cls="";
           var icon=sel&&ok?"\u2713":sel&&!ok?"\u2717":ok?"\u2713":String.fromCharCode(65+oi);
           return "<div class=\"ag-opt "+cls+"\"><span class=\"ag-oi\">"+icon+"</span><span>"+opt+(ok?" <b style=\"color:#1e5631\">(correcta)</b>":"")+"</span></div>";
         }).join("");
-        ch="<div class=\"ag-qc "+(earned>0?"vc":"vw")+"\">"
-          +"<div class=\"ag-qh\"><span class=\"ag-qn\">P"+(qi+1)+" &bull; Opci\u00F3n M\u00FAltiple</span><span class=\"ag-qs\">"+earned+"/"+pts+" pts</span></div>"
+        var contestMC=r.contestaciones&&r.contestaciones[q.id]?"<div class=\"ag-cb\">\u26A0 Alumno impugna: &ldquo;"+r.contestaciones[q.id]+"&rdquo;</div>":"";
+        var fbMC=GS.feedback&&GS.feedback[q.id]!==undefined?GS.feedback[q.id]:(r.teacherFeedback&&r.teacherFeedback[q.id]?r.teacherFeedback[q.id]:"");
+        if(GS.feedback&&GS.feedback[q.id]===undefined&&fbMC) GS.feedback[q.id]=fbMC;
+        var fbBoxMC="<div style=\"margin-top:8px\"><label style=\"font-size:.78em;font-weight:600;color:#374151;display:block;margin-bottom:3px\">\u{1F4AC} Retroalimentaci\u00F3n al alumno (opcional):</label>"
+          +"<textarea data-qid=\""+q.id+"\" oninput=\"agUpdFB(this)\" placeholder=\"Explica por qu\u00E9 la respuesta correcta es esa, responde a la impugnaci\u00F3n, etc.\" style=\"width:100%;min-height:54px;border:1px solid #d1d5db;border-radius:6px;padding:6px 8px;font-size:.83em;font-family:inherit;resize:vertical\">"+escTA(fbMC)+"</textarea></div>";
+        var cardCls=isMcReview?"vo":(earned>0?"vc":"vw");
+        var headLabel=isMcReview?"Opci\u00F3n M\u00FAltiple \u00B7 \u{1F50D} Requiere revisi\u00F3n":"Opci\u00F3n M\u00FAltiple";
+        var pendBadge=isMcReview&&!r.gradedByTeacher?" <span style=\"background:#fef3c7;color:#92400e;font-size:.7em;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:6px\">PENDIENTE</span>":"";
+        var scoreRow="";
+        if(isMcReview){
+          var manualCurrent=earned-autoEarned;
+          var autoLabel=(ans===q.correct)
+            ? "<div style=\"background:#ecfdf5;border:1px solid #6ee7b7;border-radius:6px;padding:7px 10px;font-size:.8em;color:#065f46;margin:8px 0\">\u2713 <b>Auto:</b> respuesta correcta = <b>"+autoEarned+"/"+autoMax+" pts</b> (1/3 autom\u00E1tico)</div>"
+            : "<div style=\"background:#fef2f2;border:1px solid #fca5a5;border-radius:6px;padding:7px 10px;font-size:.8em;color:#991b1b;margin:8px 0\">\u2717 <b>Auto:</b> respuesta incorrecta = <b>0/"+autoMax+" pts</b> (1/3 autom\u00E1tico)</div>";
+          scoreRow=autoLabel
+            +"<div class=\"ag-row\"><label>Procedimiento (manual):</label>"
+            +"<input class=\"ag-si\" type=\"number\" min=\"0\" max=\""+manualMax+"\" value=\""+manualCurrent+"\" data-qid=\""+q.id+"\" data-auto=\""+autoEarned+"\" data-manmax=\""+manualMax+"\" data-totmax=\""+pts+"\" oninput=\"agUpdMcReview(this)\">"
+            +"<span class=\"ag-sm\">/ "+manualMax+" pts</span>"
+            +"<span style=\"font-size:.75em;color:#9ca3af\">(2/3 seg\u00FAn procedimiento)</span></div>";
+        }
+        ch="<div class=\"ag-qc "+cardCls+"\">"
+          +"<div class=\"ag-qh\"><span class=\"ag-qn\">P"+(qi+1)+" &bull; "+headLabel+pendBadge+"</span><span class=\"ag-qs\" id=\"agS-"+q.id+"\">"+earned+"/"+pts+" pts</span></div>"
           +"<p class=\"ag-qt\">"+q.text+"</p><div>"+opts+"</div>"
-          +(ans===undefined?"<p style=\"font-size:.82em;color:#9ca3af;font-style:italic\">Sin respuesta</p>":"")+"</div>";
+          +(ans===undefined?"<p style=\"font-size:.82em;color:#9ca3af;font-style:italic\">Sin respuesta</p>":"")
+          +contestMC+scoreRow+fbBoxMC+"</div>";
       } else if(q.type==="open"){
         earned=ms!==undefined?ms:0; GS.scores[q.id]=earned; total+=earned;
         var contest=r.contestaciones&&r.contestaciones[q.id]?"<div class=\"ag-cb\">\u26A0 Alumno impugna: &ldquo;"+r.contestaciones[q.id]+"&rdquo;</div>":"";
         var rubric=q.rubric?"<details class=\"ag-rubric\"><summary>\u{1F4CC} Criterios</summary><p>"+q.rubric+"</p></details>":"";
+        var fbOp=GS.feedback&&GS.feedback[q.id]!==undefined?GS.feedback[q.id]:(r.teacherFeedback&&r.teacherFeedback[q.id]?r.teacherFeedback[q.id]:"");
+        if(GS.feedback&&GS.feedback[q.id]===undefined&&fbOp) GS.feedback[q.id]=fbOp;
+        var fbBoxOp="<div style=\"margin-top:8px\"><label style=\"font-size:.78em;font-weight:600;color:#374151;display:block;margin-bottom:3px\">\u{1F4AC} Retroalimentaci\u00F3n al alumno (opcional):</label>"
+          +"<textarea data-qid=\""+q.id+"\" oninput=\"agUpdFB(this)\" placeholder=\"Comenta sobre la respuesta, sugiere mejoras, etc.\" style=\"width:100%;min-height:54px;border:1px solid #d1d5db;border-radius:6px;padding:6px 8px;font-size:.83em;font-family:inherit;resize:vertical\">"+escTA(fbOp)+"</textarea></div>";
         ch="<div class=\"ag-qc vo\">"
           +"<div class=\"ag-qh\"><span class=\"ag-qn\">P"+(qi+1)+" &bull; ABIERTA</span><span class=\"ag-qs\" id=\"agS-"+q.id+"\">"+earned+"/"+pts+" pts</span></div>"
           +"<p class=\"ag-qt\">"+q.text+"</p>"
@@ -9642,7 +9726,8 @@ window.agOpen=function(idx){
           +"<div class=\"ag-row\"><label>Calificaci\u00F3n:</label>"
           +"<input class=\"ag-si\" type=\"number\" min=\"0\" max=\""+pts+"\" value=\""+earned+"\" data-qid=\""+q.id+"\" data-max=\""+pts+"\" oninput=\"agUpd(this)\">"
           +"<span class=\"ag-sm\">/ "+pts+" pts</span>"
-          +"<span style=\"font-size:.75em;color:#9ca3af\">(0=sin resp / "+pts+"=perfecta)</span></div></div>";
+          +"<span style=\"font-size:.75em;color:#9ca3af\">(0=sin resp / "+pts+"=perfecta)</span></div>"
+          +fbBoxOp+"</div>";
       } else if(q.type==="match"){
         var ma=(typeof ans==="object"&&ans)?ans:{};
         var correct=0, tp=(q.pairs||[]).length;
@@ -9655,12 +9740,17 @@ window.agOpen=function(idx){
         var autoS=tp>0?Math.round(pts*correct/tp):0;
         earned=ms!==undefined?ms:autoS; GS.scores[q.id]=earned; total+=earned;
         var contest2=r.contestaciones&&r.contestaciones[q.id]?"<div class=\"ag-cb\">\u26A0 Alumno impugna: &ldquo;"+r.contestaciones[q.id]+"&rdquo;</div>":"";
+        var fbMa=GS.feedback&&GS.feedback[q.id]!==undefined?GS.feedback[q.id]:(r.teacherFeedback&&r.teacherFeedback[q.id]?r.teacherFeedback[q.id]:"");
+        if(GS.feedback&&GS.feedback[q.id]===undefined&&fbMa) GS.feedback[q.id]=fbMa;
+        var fbBoxMa="<div style=\"margin-top:8px\"><label style=\"font-size:.78em;font-weight:600;color:#374151;display:block;margin-bottom:3px\">\u{1F4AC} Retroalimentaci\u00F3n al alumno (opcional):</label>"
+          +"<textarea data-qid=\""+q.id+"\" oninput=\"agUpdFB(this)\" placeholder=\"Comenta sobre los pares correctos/incorrectos, etc.\" style=\"width:100%;min-height:54px;border:1px solid #d1d5db;border-radius:6px;padding:6px 8px;font-size:.83em;font-family:inherit;resize:vertical\">"+escTA(fbMa)+"</textarea></div>";
         ch="<div class=\"ag-qc vm\">"
           +"<div class=\"ag-qh\"><span class=\"ag-qn\">P"+(qi+1)+" &bull; Relaci\u00F3n Columnas</span><span class=\"ag-qs\" id=\"agS-"+q.id+"\">"+earned+"/"+pts+" pts</span></div>"
           +"<p class=\"ag-qt\">"+q.text+"</p><div style=\"margin:8px 0\">"+ph+"</div>"+contest2
           +"<div class=\"ag-row\"><label>Auto: "+autoS+"/"+pts+" | Ajustar:</label>"
           +"<input class=\"ag-si\" type=\"number\" min=\"0\" max=\""+pts+"\" value=\""+earned+"\" data-qid=\""+q.id+"\" data-max=\""+pts+"\" oninput=\"agUpd(this)\">"
-          +"<span class=\"ag-sm\">/ "+pts+" pts</span></div></div>";
+          +"<span class=\"ag-sm\">/ "+pts+" pts</span></div>"
+          +fbBoxMa+"</div>";
       }
       sd.innerHTML+=ch;
     });
@@ -9679,6 +9769,25 @@ window.agUpd=function(inp){
   agDisp(Object.values(GS.scores).reduce(function(a,b){return a+b;},0));
 };
 
+window.agUpdFB=function(ta){
+  var qId=ta.dataset.qid;
+  if(!GS.feedback) GS.feedback={};
+  GS.feedback[qId]=ta.value;
+};
+
+window.agUpdMcReview=function(inp){
+  var qId=inp.dataset.qid;
+  var autoPts=parseFloat(inp.dataset.auto)||0;
+  var manualMax=parseInt(inp.dataset.manmax)||0;
+  var totMax=parseInt(inp.dataset.totmax)||0;
+  var manualVal=Math.max(0,Math.min(manualMax,parseFloat(inp.value)||0));
+  var totEarned=autoPts+manualVal;
+  GS.scores[qId]=totEarned;
+  var d=document.getElementById("agS-"+qId);
+  if(d) d.textContent=totEarned+"/"+totMax+" pts";
+  agDisp(Object.values(GS.scores).reduce(function(a,b){return a+b;},0));
+};
+
 function agDisp(tot){
   var n=GS.max>0?Math.round(tot/GS.max*100):tot;
   var col=n>=70?"#1e5631":"#dc2626";
@@ -9692,12 +9801,26 @@ window.agSave=function(){
   var tot=Object.values(GS.scores).reduce(function(a,b){return a+b;},0);
   var norm=GS.max>0?Math.round(tot/GS.max*100):tot;
   r.manualScores=Object.assign({},GS.scores);
+  // Filtrar feedback: solo guardar entradas no vacías
+  var fb={};
+  Object.keys(GS.feedback||{}).forEach(function(k){
+    var v=(GS.feedback[k]||"").trim();
+    if(v) fb[k]=v;
+  });
+  r.teacherFeedback=fb;
   r.scoreMC=tot; r.maxMC=GS.max; r.scoreTotal=norm;
   r.gradedByTeacher=true; r.gradedAt=new Date().toISOString();
   all[GS.idx]=r; sR(all);
   var sb=gSB();
   if(sb&&r._supabaseId){
-    sb.from("resultados").update({puntos_mc:tot,max_mc:GS.max,total:norm,calificado:true,calificado_en:r.gradedAt}).eq("id",r._supabaseId).then(function(){});
+    var payload={puntos_mc:tot,max_mc:GS.max,total:norm,calificado:true,calificado_en:r.gradedAt,retroalimentacion_docente:fb};
+    sb.from("resultados").update(payload).eq("id",r._supabaseId).then(function(res){
+      // Fallback: si la columna retroalimentacion_docente no existe aún, reintentar sin ella
+      if(res&&res.error){
+        delete payload.retroalimentacion_docente;
+        sb.from("resultados").update(payload).eq("id",r._supabaseId).then(function(){});
+      }
+    });
   }
   if(window.showToast) window.showToast("Calificaci\u00F3n guardada: "+norm+"/100","success",3000);
   agClose();
@@ -9706,7 +9829,7 @@ window.agSave=function(){
 
 window.agClose=function(){
   document.getElementById("ag-grade-modal").style.display="none";
-  GS={idx:-1,scores:{},max:0};
+  GS={idx:-1,scores:{},max:0,feedback:{}};
 };
 document.getElementById("ag-grade-modal").addEventListener("click",function(e){if(e.target===this)agClose();});
 
