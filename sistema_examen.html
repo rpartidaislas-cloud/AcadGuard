@@ -8602,7 +8602,7 @@ async function syncStudentToSupabase(student) {
 }
 
 // Sube TODOS los alumnos locales a Supabase de una vez
-async // Descarga alumnos de Supabase y los fusiona con los locales
+// Descarga alumnos de Supabase y los fusiona con los locales
 async function syncStudentsFromSupabase() {
   if (!_sb) { showToast('Supabase no configurado', 'warning'); return; }
   try {
