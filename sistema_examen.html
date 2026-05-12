@@ -5054,9 +5054,9 @@ function submitExam(reason) {
   state.bank.sections.forEach(sec => sec.questions.forEach(q => {
     if (q.type === 'mc' || q.type === 'calc') {
       maxMC += q.points;
-      if (q.requiresReview) {
-        // Regla 1/3 + 2/3: si elige la correcta, gana automáticamente 1/3 de los puntos.
-        // Los 2/3 restantes quedan pendientes hasta que el docente revise el procedimiento.
+      // calc SIEMPRE usa regla 1/3+2/3 (hoja de cálculo = procedimiento obligatorio)
+      const needsReview = q.type === 'calc' || q.requiresReview;
+      if (needsReview) {
         pendingReview.push(q.id);
         if (state.session.answers[q.id] === q.correct) {
           scoreMC += Math.round(q.points / 3);
@@ -9432,6 +9432,50 @@ var GS={idx:-1,scores:{},max:0,feedback:{}};
 
 function escTA(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
 
+/* Renderiza la hoja de cálculo del alumno como tabla HTML de solo lectura */
+function renderSheetForGrading(sheetDataJson) {
+  var cells;
+  try { cells = JSON.parse(sheetDataJson); } catch(e) { return ""; }
+  var addrs = Object.keys(cells).filter(function(a){ return cells[a] && cells[a].raw !== '' && cells[a].raw != null; });
+  if (!addrs.length) return "<p style='font-size:.8em;color:#9ca3af;font-style:italic'>La hoja de cálculo estaba vacía al momento de la entrega.</p>";
+  var maxRow=0, maxCol=0;
+  addrs.forEach(function(a){
+    var m=a.match(/([A-Z]+)([0-9]+)/); if(!m) return;
+    var col=m[1].split('').reduce(function(n,c){return n*26+(c.charCodeAt(0)-64);},0);
+    var row=parseInt(m[2]);
+    if(row>maxRow) maxRow=row; if(col>maxCol) maxCol=col;
+  });
+  maxRow=Math.min(maxRow,30); maxCol=Math.min(maxCol,10);
+  var cols=[];
+  for(var c=1;c<=maxCol;c++) cols.push(String.fromCharCode(64+c));
+  var html="<div style='overflow-x:auto;margin:8px 0;border:1px solid #e5e7eb;border-radius:6px'><table style='border-collapse:collapse;font-size:.75em;width:100%'>";
+  html+="<thead><tr><th style='background:#f3f4f6;padding:2px 5px;border:1px solid #e5e7eb;color:#9ca3af;font-size:.85em'></th>";
+  cols.forEach(function(l){ html+="<th style='background:#f3f4f6;padding:2px 6px;border:1px solid #e5e7eb;color:#374151;font-weight:700'>"+l+"</th>"; });
+  html+="</tr></thead><tbody>";
+  for(var r=1;r<=maxRow;r++){
+    var hasData=false;
+    for(var ci=1;ci<=maxCol;ci++){ if(cells[String.fromCharCode(64+ci)+r]) { hasData=true; break; } }
+    if(!hasData) continue;
+    html+="<tr><th style='background:#f3f4f6;padding:2px 5px;border:1px solid #e5e7eb;color:#9ca3af;font-size:.8em;text-align:right'>"+r+"</th>";
+    for(var ci2=1;ci2<=maxCol;ci2++){
+      var addr2=String.fromCharCode(64+ci2)+r;
+      var cell=cells[addr2];
+      if(cell&&cell.raw!=null&&cell.raw!==''){
+        var isF=typeof cell.raw==='string'&&cell.raw.startsWith('=');
+        var disp=cell.val!=null?(typeof cell.val==='number'?cell.val.toLocaleString('es-MX',{maximumFractionDigits:4}):String(cell.val)):String(cell.raw);
+        var tip=isF?'Fórmula: '+cell.raw+(cell.val!=null?' → '+cell.val:''):'';
+        html+="<td title='"+escTA(tip)+"' style='padding:2px 6px;border:1px solid #e5e7eb;background:"+(isF?'#fffbeb':'white')+";color:"+(isF?'#854d0e':'#111827')+"'>"+escTA(disp)+"</td>";
+      } else {
+        html+="<td style='padding:2px 6px;border:1px solid #e5e7eb'></td>";
+      }
+    }
+    html+="</tr>";
+  }
+  html+="</tbody></table></div>";
+  if(maxRow>=30||maxCol>=10) html+="<p style='font-size:.7em;color:#9ca3af'>(Se muestran máx. 30 filas × 10 columnas)</p>";
+  return html;
+}
+
 function gSB(){try{return window.supabase.createClient(SU,SK,{auth:{persistSession:false}});}catch(e){return null;}}
 function gR(){return window.loadStore?window.loadStore(RK,[]):[]; }
 function sR(r){if(window.saveStore)window.saveStore(RK,r);}
@@ -9703,7 +9747,8 @@ window.agOpen=function(idx){
       var ms=r.manualScores?r.manualScores[q.id]:undefined;
       var earned=0, ch="";
       if(q.type==="mc"||q.type==="calc"){
-        var isMcReview=!!q.requiresReview;
+        // calc SIEMPRE requiere revisión de procedimiento; mc lo requiere si tiene el checkbox
+        var isMcReview=q.type==="calc"||!!q.requiresReview;
         var autoMax=isMcReview?Math.round(pts/3):pts;  // 1/3 automático
         var manualMax=isMcReview?(pts-autoMax):0;       // 2/3 procedimiento
         var autoEarned=isMcReview?((ans===q.correct)?autoMax:0):((ans===q.correct)?pts:0);
@@ -9726,11 +9771,29 @@ window.agOpen=function(idx){
         }).join("");
         var contestMC=r.contestaciones&&r.contestaciones[q.id]?"<div class=\"ag-cb\">\u26A0 Alumno impugna: &ldquo;"+r.contestaciones[q.id]+"&rdquo;</div>":"";
         var fbMC=GS.feedback&&GS.feedback[q.id]!==undefined?GS.feedback[q.id]:(r.teacherFeedback&&r.teacherFeedback[q.id]?r.teacherFeedback[q.id]:"");
+        // Hoja de cálculo del alumno (solo para tipo calc)
+        var sheetBlock="";
+        if(q.type==="calc"){
+          var sheetDataRaw=r.answers?r.answers[q.id+"_sheet_data"]:null;
+          var procText=r.answers?r.answers[q.id+"_proc"]:null;
+          if(sheetDataRaw){
+            sheetBlock="<div style='margin:10px 0 4px'><div style='font-size:.78em;font-weight:700;color:#374151;margin-bottom:4px'>\u{1F4CA} Hoja de c\u00E1lculo del alumno:</div>"
+              +renderSheetForGrading(sheetDataRaw)+"</div>";
+          } else if(procText){
+            sheetBlock="<div style='margin:10px 0 4px'><div style='font-size:.78em;font-weight:700;color:#374151;margin-bottom:4px'>\u{1F4CA} Procedimiento del alumno (texto):</div>"
+              +"<pre style='background:#f8fafc;border:1px solid #e5e7eb;border-radius:6px;padding:8px;font-size:.75em;overflow-x:auto;white-space:pre-wrap'>"+escTA(procText)+"</pre></div>";
+          } else {
+            sheetBlock="<div style='background:#fef9c3;border:1px solid #fde047;border-radius:6px;padding:7px 10px;font-size:.8em;color:#854d0e;margin:8px 0'>"
+              +"\u26A0 El alumno no aplic\u00F3 ninguna hoja de c\u00E1lculo para esta pregunta. Solo se eval\u00FAa la opci\u00F3n elegida.</div>";
+          }
+        }
         if(GS.feedback&&GS.feedback[q.id]===undefined&&fbMC) GS.feedback[q.id]=fbMC;
         var fbBoxMC="<div style=\"margin-top:8px\"><label style=\"font-size:.78em;font-weight:600;color:#374151;display:block;margin-bottom:3px\">\u{1F4AC} Retroalimentaci\u00F3n al alumno (opcional):</label>"
           +"<textarea data-qid=\""+q.id+"\" oninput=\"agUpdFB(this)\" placeholder=\"Explica por qu\u00E9 la respuesta correcta es esa, responde a la impugnaci\u00F3n, etc.\" style=\"width:100%;min-height:54px;border:1px solid #d1d5db;border-radius:6px;padding:6px 8px;font-size:.83em;font-family:inherit;resize:vertical\">"+escTA(fbMC)+"</textarea></div>";
         var cardCls=isMcReview?"vo":(earned>0?"vc":"vw");
-        var headLabel=isMcReview?"Opci\u00F3n M\u00FAltiple \u00B7 \u{1F50D} Requiere revisi\u00F3n":"Opci\u00F3n M\u00FAltiple";
+        var headLabel=isMcReview
+          ?(q.type==="calc"?"C\u00E1lculo \u00B7 \u{1F4CA} Requiere procedimiento":"Opci\u00F3n M\u00FAltiple \u00B7 \u{1F50D} Requiere revisi\u00F3n")
+          :"Opci\u00F3n M\u00FAltiple";
         var pendBadge=isMcReview&&!r.gradedByTeacher?" <span style=\"background:#fef3c7;color:#92400e;font-size:.7em;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:6px\">PENDIENTE</span>":"";
         var scoreRow="";
         if(isMcReview){
@@ -9748,7 +9811,7 @@ window.agOpen=function(idx){
           +"<div class=\"ag-qh\"><span class=\"ag-qn\">P"+(qi+1)+" &bull; "+headLabel+pendBadge+"</span><span class=\"ag-qs\" id=\"agS-"+q.id+"\">"+earned+"/"+pts+" pts</span></div>"
           +"<p class=\"ag-qt\">"+q.text+"</p><div>"+opts+"</div>"
           +(ans===undefined?"<p style=\"font-size:.82em;color:#9ca3af;font-style:italic\">Sin respuesta</p>":"")
-          +contestMC+scoreRow+fbBoxMC+"</div>";
+          +contestMC+(sheetBlock||"")+scoreRow+fbBoxMC+"</div>";
       } else if(q.type==="open"){
         earned=ms!==undefined?ms:0; GS.scores[q.id]=earned; total+=earned;
         var contest=r.contestaciones&&r.contestaciones[q.id]?"<div class=\"ag-cb\">\u26A0 Alumno impugna: &ldquo;"+r.contestaciones[q.id]+"&rdquo;</div>":"";
