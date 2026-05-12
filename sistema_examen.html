@@ -5132,8 +5132,17 @@ function submitExam(reason) {
   syncResultToSupabase(result).then(res => {
     if (res.ok) {
       console.info('✅ Resultado sincronizado con Supabase');
+      // Guardar el ID de Supabase en el resultado local para poder borrarlo/actualizarlo después
+      if (res.supabaseId) {
+        const all = loadStore(STORE_KEYS.results, []);
+        const idx = all.findIndex(r => r.student === result.student && r.finishedAt === result.finishedAt);
+        if (idx >= 0) {
+          all[idx]._supabaseId = res.supabaseId;
+          saveStore(STORE_KEYS.results, all);
+          console.info('✅ _supabaseId guardado:', res.supabaseId);
+        }
+      }
     } else if (res.reason !== 'not_configured') {
-      // Si Supabase estaba configurado pero falló, el resultado sigue en IndexedDB
       console.warn('Supabase sync failed:', res.reason);
     }
   });
@@ -9055,9 +9064,9 @@ async function syncResultToSupabase(result) {
       retroalimentacion: result.feedback || null,
       integridad:       result._integrity || null
     };
-    const { error } = await _sb.from('resultados').insert(row);
+    const { data: insertData, error } = await _sb.from('resultados').insert(row).select('id').single();
     if (error) throw error;
-    return { ok: true };
+    return { ok: true, supabaseId: insertData ? insertData.id : null };
   } catch (e) {
     console.warn('Supabase sync error:', e.message);
     return { ok: false, reason: e.message };
