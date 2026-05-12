@@ -5243,20 +5243,26 @@ function submitExam(reason) {
 
   // Calcular hash de integridad (SHA-256) para detectar tampering posterior
   // El hash cubre los campos críticos del resultado
-  // Guardar resultado inmediatamente (sin hash todavía para no bloquear UI)
-  const allResults = loadStore(STORE_KEYS.results, []);
-  allResults.push(result);
-  saveStore(STORE_KEYS.results, allResults);
+  // Guardar resultado exactamente UNA vez. El hash llega async y solo ACTUALIZA.
+  let _resultPushed = false;
+  const _doSaveResult = (hash) => {
+    if (_resultPushed) return;  // guard absoluto: nunca empujar dos veces
+    _resultPushed = true;
+    if (hash) result._integrity = hash;
+    const all = loadStore(STORE_KEYS.results, []);
+    all.push(result);
+    saveStore(STORE_KEYS.results, all);
+  };
 
-  // Calcular hash SHA-256 y ACTUALIZAR (no volver a empujar) el resultado ya guardado
+  // Fallback: si signResult tarda más de 2 s (o no está disponible), guardamos sin hash
+  const _hashFallback = setTimeout(() => _doSaveResult(null), 2000);
+
   signResult(result).then(hash => {
-    const all2 = loadStore(STORE_KEYS.results, []);
-    const idx2 = all2.findLastIndex(r =>
-      r.student === result.student && r.finishedAt === result.finishedAt);
-    if (idx2 >= 0 && !all2[idx2]._integrity) {
-      all2[idx2]._integrity = hash;
-      saveStore(STORE_KEYS.results, all2);
-    }
+    clearTimeout(_hashFallback);
+    _doSaveResult(hash);
+  }).catch(() => {
+    clearTimeout(_hashFallback);
+    _doSaveResult(null);
   });
 
   // Si el alumno tenía permitido un reintento, lo consumimos automáticamente
@@ -5419,11 +5425,9 @@ function submitFeedback() {
       break;
     }
   }
-  if (!updated && state.lastResult) {
-    state.lastResult.feedback = feedback;
-    state.lastResult.feedbackBonus = fbBonus;
-    state.lastResult.scoreTotal = (state.lastResult.scoreTotal || 0) + fbBonus;
-    results.push(state.lastResult);
+  if (!updated) {
+    // No empujar de nuevo — solo actualizar si existe. Si no existe, log de warning.
+    console.warn('submitFeedback: no se encontró el resultado para actualizar con la retroalimentación');
   }
   saveStore(STORE_KEYS.results, results);
 
@@ -9781,11 +9785,13 @@ function renderSR(el,r,all){
           });
           html+="</div>";
         }
-        if(!isGraded&&!contested){
-          // Use data attributes to avoid quote issues
-          html+="<button class=\"ag-impbtn\" data-code=\""+(r.resultCode||"")+"\" data-qid=\""+q.id+"\" onclick=\"agContest(this)\">Impugnar esta pregunta</button>";
-        } else if(contested){
-          html+="<div class=\"ag-cb\">\u{1F4EC} Impugnaci\u00F3n enviada: "+contested+"</div>";
+        // "Impugnar" solo para preguntas abiertas
+        if(q.type==="open"){
+          if(!isGraded&&!contested){
+            html+="<button class=\"ag-impbtn\" data-code=\""+(r.resultCode||"")+"\" data-qid=\""+q.id+"\" onclick=\"agContest(this)\">Impugnar esta pregunta</button>";
+          } else if(contested){
+            html+="<div class=\"ag-cb\">\u{1F4EC} Impugnaci\u00F3n enviada: "+contested+"</div>";
+          }
         }
         // Retroalimentación del docente (visible solo si ya calificó)
         if(isGraded && r.teacherFeedback && r.teacherFeedback[q.id]){
