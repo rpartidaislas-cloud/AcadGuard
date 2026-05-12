@@ -4033,16 +4033,19 @@ function renderResults() {
   // Toggle: mostrar archivados o activos
   const showArchived = window._showArchivedResults === true;
   const visible = results.filter(r => showArchived ? r.archived : !r.archived);
+  const visibleWithRealIdx = results.map((r,i)=>i).filter(i => showArchived ? results[i].archived : !results[i].archived);
   const archivedCount = results.filter(r => r.archived).length;
-  // Barra superior con toggles
+  // Barra superior con toggles + botón borrar seleccionados
   let html = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
     <button onclick="window._showArchivedResults=false;renderResults()" class="btn btn-sm ${!showArchived?'btn-primary':'btn-ghost'}" style="font-size:12px">
       📋 Activos (${results.length - archivedCount})</button>
     <button onclick="window._showArchivedResults=true;renderResults()" class="btn btn-sm ${showArchived?'btn-primary':'btn-ghost'}" style="font-size:12px">
       📦 Archivados (${archivedCount})</button>
+    <button id="btnDeleteSelected" onclick="deleteSelectedResults()" class="btn btn-sm" style="background:var(--accent);color:white;font-size:12px;display:none">
+      🗑️ Borrar seleccionados (<span id="selectedCount">0</span>)</button>
   </div>`;
   if (visible.length === 0) { box.innerHTML = html + "<p class='muted'>" + (showArchived ? "No hay resultados archivados." : "No hay resultados activos.") + "</p>"; return; }
-  html += "<table><thead><tr><th>Alumno</th><th>Examen</th><th>Inicio</th><th>Fin</th><th>Razón</th><th>Pts MC</th><th>🎮 Bonus</th><th>Total</th><th>Estado</th><th title='Integridad SHA-256 del resultado'>🔐</th></tr></thead><tbody>";
+  html += "<table><thead><tr><th style='width:32px'><input type='checkbox' id='chkSelectAll' title='Seleccionar todos' onchange='toggleSelectAll(this)'></th><th>Alumno</th><th>Examen</th><th>Inicio</th><th>Fin</th><th>Razón</th><th>Pts MC</th><th>🎮 Bonus</th><th>Total</th><th>Estado</th><th title='Integridad SHA-256 del resultado'>🔐</th></tr></thead><tbody>";
   for (const r of visible) {
     const status = r.scoreTotal >= state.config.pass ? "✅ Aprobado" : "❌ Reprobado";
     const examTitle = r.examTitle || "(examen previo)";
@@ -4062,7 +4065,8 @@ function renderResults() {
     const integBadge = r._integrity
       ? `<span id="${integId}" title="Verificando..." style="font-size:16px">⏳</span>`
       : `<span title="Sin firma (resultado anterior a v3.0)" style="font-size:16px;color:#aaa">🔓</span>`;
-    html += `<tr>
+    html += `<tr data-real-idx="${visibleWithRealIdx[visible.indexOf(r)]}">
+      <td style="text-align:center"><input type="checkbox" class="chk-result" onchange="updateSelectedCount()" style="width:15px;height:15px"></td>
       <td>${escapeHTML(r.student)}</td>
       <td><span style="background:#e8f1f8;color:#1f4e79;padding:2px 8px;border-radius:4px;font-size:12px">${escapeHTML(examTitle)}</span></td>
       <td>${new Date(r.startedAt).toLocaleString()}</td>
@@ -4235,9 +4239,66 @@ function clearResults() {
   if (!results.length) return;
   if (!confirm(`¿Borrar TODOS los ${results.length} resultados? Esta acción no se puede deshacer.\n\nSe recomienda exportar antes a JSON como respaldo.`)) return;
   if (!confirm("Confirmación final: ¿realmente borrar todos los resultados?")) return;
+  const idsToDelete = results.map(r => r._supabaseId).filter(Boolean);
+  if (idsToDelete.length > 0) {
+    try {
+      const sb = window.gSB ? window.gSB() : null;
+      if (sb) sb.from('resultados').delete().in('id', idsToDelete).then(function(res){
+        if (res && res.error) console.warn('Error borrando de Supabase:', res.error.message);
+        else console.info('✅ ' + idsToDelete.length + ' resultados eliminados de Supabase');
+      });
+    } catch(e) { console.warn('Supabase no disponible:', e.message); }
+  }
   saveStore(STORE_KEYS.results, []);
   renderResults();
   showToast("✓ Resultados borrados");
+}
+
+function toggleSelectAll(chk) {
+  document.querySelectorAll('.chk-result').forEach(c => { c.checked = chk.checked; });
+  updateSelectedCount();
+}
+
+function updateSelectedCount() {
+  const n = document.querySelectorAll('.chk-result:checked').length;
+  const cnt = document.getElementById('selectedCount');
+  const btn = document.getElementById('btnDeleteSelected');
+  if (cnt) cnt.textContent = n;
+  if (btn) btn.style.display = n > 0 ? 'inline-flex' : 'none';
+  // Si no todos están marcados, desmarcar el "seleccionar todos"
+  const all = document.querySelectorAll('.chk-result').length;
+  const sa = document.getElementById('chkSelectAll');
+  if (sa) sa.indeterminate = n > 0 && n < all, sa.checked = n === all && all > 0;
+}
+
+function deleteSelectedResults() {
+  const rows = document.querySelectorAll('tbody tr');
+  const indices = [];
+  rows.forEach(row => {
+    const chk = row.querySelector('.chk-result');
+    if (chk && chk.checked) {
+      const idx = parseInt(row.dataset.realIdx);
+      if (!isNaN(idx)) indices.push(idx);
+    }
+  });
+  if (!indices.length) return;
+  if (!confirm(`¿Borrar ${indices.length} resultado(s) seleccionado(s)? Esta acción no se puede deshacer.`)) return;
+  const all = loadStore(STORE_KEYS.results, []);
+  // Borrar de Supabase los que tengan _supabaseId
+  const idsToDelete = indices.map(i => all[i] && all[i]._supabaseId).filter(Boolean);
+  if (idsToDelete.length > 0) {
+    try {
+      const sb = window.gSB ? window.gSB() : null;
+      if (sb) sb.from('resultados').delete().in('id', idsToDelete).then(function(res){
+        if (res && res.error) console.warn('Error borrando de Supabase:', res.error.message);
+      });
+    } catch(e) { console.warn('Supabase no disponible:', e.message); }
+  }
+  // Borrar del array local (de mayor a menor para no desplazar índices)
+  indices.sort((a, b) => b - a).forEach(i => all.splice(i, 1));
+  saveStore(STORE_KEYS.results, all);
+  renderResults();
+  showToast(`✓ ${indices.length} resultado(s) eliminado(s)`, 'success', 2500);
 }
 
 function renderAlerts() {
@@ -4669,6 +4730,10 @@ function installAntiCheat() {
   document.addEventListener('webkitfullscreenchange', onFullscreenChange);
   document.addEventListener('msfullscreenchange', onFullscreenChange);
   document.addEventListener('mozfullscreenchange', onFullscreenChange);
+  // Detectar cursor que se escapa a otra pantalla (multi-monitor).
+  // En pantalla completa el documento ocupa TODA la pantalla, así que mouseleave
+  // solo puede dispararse si el cursor se mueve físicamente a otra pantalla.
+  document.addEventListener('mouseleave', onMouseLeaveScreen);
   // Detectar intento de cerrar pestaña / navegar fuera
   window.addEventListener('beforeunload', onBeforeUnload);
   window.addEventListener('pagehide', onPageHide);
@@ -4690,6 +4755,7 @@ function removeAntiCheat() {
   document.removeEventListener('webkitfullscreenchange', onFullscreenChange);
   document.removeEventListener('msfullscreenchange', onFullscreenChange);
   document.removeEventListener('mozfullscreenchange', onFullscreenChange);
+  document.removeEventListener('mouseleave', onMouseLeaveScreen);
   window.removeEventListener('beforeunload', onBeforeUnload);
   window.removeEventListener('pagehide', onPageHide);
   if (state.idleTimer) clearTimeout(state.idleTimer);
@@ -4791,6 +4857,18 @@ function onBlur() {
 function onFocus() {
   // info-level
   logEvent("Ventana retomó foco", "info", "");
+}
+function onMouseLeaveScreen(e) {
+  // Solo actuar si estamos en pantalla completa activa.
+  // En pantalla completa el documento ocupa toda la pantalla; si el cursor sale
+  // (relatedTarget === null) es porque fue hacia otra pantalla (multi-monitor).
+  if (!isFullscreen()) return;
+  if (!state.session || state.session.finished) return;
+  // relatedTarget es null cuando el cursor sale completamente del documento
+  if (e.relatedTarget === null) {
+    raiseAlert("Cursor fuera de la pantalla del examen", "warn",
+      "El cursor abandonó la ventana del examen — posible uso de pantalla secundaria");
+  }
 }
 function onCopyAttempt(e) {
   if (isInsideSheet(e)) return; // permitir copiar dentro de la hoja
