@@ -9738,8 +9738,15 @@ async function loadExamsFromSupabase() {
         if (typeof updateExamEditorTitle === 'function') updateExamEditorTitle();
       }
     }
-  } catch (e) { console.warn('loadExamsFromSupabase error:', e.message); throw e; }
-  finally {
+  } catch (e) {
+    // DataCloneError (Headers cannot be cloned) es un error interno de Supabase JS — ignorar
+    if (e && e.name === 'DataCloneError') {
+      console.info('loadExamsFromSupabase: DataCloneError interno de Supabase (ignorado)');
+    } else {
+      console.warn('loadExamsFromSupabase error:', e.message);
+      throw e;
+    }
+  } finally {
     const syncBtn = document.getElementById('syncAllBtn');
     if (syncBtn && syncBtn.textContent.includes('Cargando')) {
       syncBtn.textContent = '🔄 Sincronizar'; syncBtn.disabled = false;
