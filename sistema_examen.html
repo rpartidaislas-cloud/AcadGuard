@@ -4417,31 +4417,30 @@ async function syncAllFromSupabase() {
   if (btn) { btn.textContent = '⏳ Sincronizando…'; btn.disabled = true; }
   showToast('🔄 Sincronizando con Supabase…', 'success', 2000);
 
-  try {
-    const results = await Promise.allSettled([
-      loadExamsFromSupabase(),
-      syncStudentsFromSupabase(),
-      syncFromSupabase()
-    ]);
+  const errors = [];
 
-    const labels = ['Exámenes', 'Alumnos', 'Resultados'];
-    const ok = results.filter(r => r.status === 'fulfilled').length;
-    const fail = results.filter(r => r.status === 'rejected');
+  // Ejecutar cada operación individualmente con su propio try/catch
+  try { await loadExamsFromSupabase(); }
+  catch(e) { errors.push('Exámenes: ' + e.message); console.error('loadExams error:', e); }
 
-    // Refrescar todas las vistas
-    if (typeof renderExamsList === 'function') renderExamsList();
-    if (typeof renderStudents === 'function') renderStudents();
-    if (typeof renderResults === 'function') renderResults();
-    if (typeof updateAdminTabBadges === 'function') updateAdminTabBadges();
+  try { await syncStudentsFromSupabase(); }
+  catch(e) { errors.push('Alumnos: ' + e.message); console.error('syncStudents error:', e); }
 
-    const msg = ok === 3
-      ? `✅ Todo sincronizado — Exámenes, Alumnos y Resultados actualizados desde Supabase`
-      : `⚠ ${ok}/3 módulos sincronizados${fail.length ? ' · Errores: ' + fail.map((_, i) => labels[i]).join(', ') : ''}`;
-    showToast(msg, ok === 3 ? 'success' : 'warning', 4000);
-  } catch (e) {
-    showToast('❌ Error al sincronizar: ' + e.message, 'error', 4000);
-  } finally {
-    if (btn) { btn.textContent = origText; btn.disabled = false; }
+  try { await syncFromSupabase(); }
+  catch(e) { errors.push('Resultados: ' + e.message); console.error('syncResults error:', e); }
+
+  // Refrescar vistas con guard individual para no bloquear si una falla
+  try { if (typeof renderExamsList === 'function') renderExamsList(); } catch(e) { console.error('renderExamsList error:', e); }
+  try { if (typeof renderStudents === 'function') renderStudents(); } catch(e) { console.error('renderStudents error:', e); }
+  try { if (typeof renderResults === 'function') renderResults(); } catch(e) { console.error('renderResults error:', e); }
+  try { if (typeof updateAdminTabBadges === 'function') updateAdminTabBadges(); } catch(e) { console.error('badges error:', e); }
+
+  if (btn) { btn.textContent = origText; btn.disabled = false; }
+
+  if (errors.length === 0) {
+    showToast('✅ Todo sincronizado desde Supabase', 'success', 4000);
+  } else {
+    showToast('⚠ Sync parcial: ' + errors.join(' | '), 'warning', 6000);
   }
 }
 
@@ -9633,25 +9632,35 @@ async function syncExamToSupabase(examId) {
 
 async function loadExamsFromSupabase() {
   if (!_sb) return;
-  // Mostrar indicador de carga si es la primera carga (sin datos locales)
   const localExams = getExams();
-  const isEmpty = Object.keys(localExams).length === 0;
-  if (isEmpty) {
+  const realLocalKeys = Object.keys(localExams).filter(k => k && k !== 'undefined');
+  if (realLocalKeys.length === 0) {
     const syncBtn = document.getElementById('syncAllBtn');
     if (syncBtn) { syncBtn.textContent = '⏳ Cargando…'; syncBtn.disabled = true; }
   }
   try {
     const { data, error } = await _sb.from('examenes').select('id, contenido, actualizado_en');
-    if (error || !data || !data.length) return;
+    if (error) throw new Error(error.message);
+
+    // Si Supabase está vacío pero tenemos exámenes locales → subirlos todos automáticamente
+    if ((!data || !data.length) && realLocalKeys.length > 0) {
+      console.info('Supabase sin exámenes. Subiendo exámenes locales…');
+      for (const k of realLocalKeys) {
+        try { await syncExamToSupabase(k); } catch(_e) {}
+      }
+      showToast('☁️ ' + realLocalKeys.length + ' examen(es) subido(s) a Supabase', 'success', 3000);
+      return;
+    }
+
+    if (!data || !data.length) return;
+
     const exams = getExams();
     let n = 0;
     for (const row of data) {
       if (!row.id || !row.contenido) continue;
       const local = exams[row.id];
-      // Solo sobreescribir si la nube es MÁS RECIENTE que la versión local
-      // _updatedAt se guarda en cada syncExamToSupabase
-      const localTs  = (local && local._updatedAt) ? local._updatedAt : 0;
-      const cloudTs  = row.actualizado_en ? new Date(row.actualizado_en).getTime() : 0;
+      const localTs = (local && local._updatedAt) ? local._updatedAt : 0;
+      const cloudTs = row.actualizado_en ? new Date(row.actualizado_en).getTime() : 0;
       if (!local || cloudTs > localTs) {
         exams[row.id] = { ...row.contenido, _updatedAt: cloudTs };
         n++;
@@ -9659,15 +9668,14 @@ async function loadExamsFromSupabase() {
     }
     if (n > 0) {
       setExams(exams);
-      console.info('✅', n, 'examen(es) actualizado(s) desde Supabase (más recientes)');
+      console.info('✅', n, 'examen(es) actualizado(s) desde Supabase');
       if (typeof renderExamsList === 'function') renderExamsList();
-      // Si el examen que se está editando fue actualizado, refrescar los campos del editor
       if (state.editingExamId && exams[state.editingExamId]) {
         state.bank = exams[state.editingExamId];
         if (typeof updateExamEditorTitle === 'function') updateExamEditorTitle();
       }
     }
-  } catch (e) { console.warn('loadExamsFromSupabase error:', e.message); }
+  } catch (e) { console.warn('loadExamsFromSupabase error:', e.message); throw e; }
   finally {
     const syncBtn = document.getElementById('syncAllBtn');
     if (syncBtn && syncBtn.textContent.includes('Cargando')) {
