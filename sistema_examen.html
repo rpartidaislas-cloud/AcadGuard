@@ -2934,17 +2934,21 @@ function loginStudent() {
   // El horario es EXCLUSIVAMENTE por examen — no hay fallback global.
   // Validar horario solo si enforceSchedule está activo y el examen no tiene acceso abierto.
   if (state.config.enforceSchedule !== false && !exam.scheduleOpen) {
-    // ── Validar INICIO ──
-    const examStart = student.scheduledStart || exam.scheduledStart || null;
-    const scheduleSource = student.scheduledStart ? 'individual' : 'examen';
+    // Leer horario individual del almacén separado (más confiable que el objeto del alumno)
+    const schedLocal = getStudentScheduleLocal(code);
+    const indivStart = schedLocal.scheduledStart || student.scheduledStart || null;
+    const indivEnd   = schedLocal.scheduledEnd   || student.scheduledEnd   || null;
 
-    // DEBUG TEMPORAL — muestra qué horario se está aplicando
+    const examStart = indivStart || exam.scheduledStart || null;
+    const scheduleSource = indivStart ? 'individual' : 'examen';
+
+    // DEBUG — quitar cuando esté resuelto
     console.info('[AcadGuard DEBUG] Alumno:', student.name,
-      '| scheduledStart (individual):', student.scheduledStart || '⚠ NO TIENE',
+      '| scheduledStart (almacén separado):', schedLocal.scheduledStart || '⚠ NO TIENE',
+      '| scheduledStart (objeto alumno):', student.scheduledStart || '⚠ NO TIENE',
       '| exam.scheduledStart (general):', exam.scheduledStart || '⚠ NO TIENE',
       '| Fuente aplicada:', scheduleSource,
       '| examStart usado:', examStart);
-
     if (examStart) {
       const start = new Date(examStart);
       if (Date.now() < start.getTime()) {
@@ -2960,7 +2964,7 @@ function loginStudent() {
       }
     }
     // ── Validar CIERRE ──
-    const examEnd = student.scheduledEnd || exam.scheduledEnd || null;
+    const examEnd = indivEnd || exam.scheduledEnd || null;
     if (examEnd) {
       const end = new Date(examEnd);
       if (Date.now() > end.getTime()) {
@@ -3489,6 +3493,26 @@ function renderStudents() {
 }
 
 /* =========================================================================
+   HORARIOS INDIVIDUALES — almacenamiento separado e inmune al sync de Supabase
+   ========================================================================= */
+// Los horarios se guardan en localStorage bajo una clave propia.
+// Ningún sync de Supabase puede sobrescribirlos.
+const SCHED_KEY = 'ag_student_schedules';
+
+function getStudentSchedules() {
+  try { return JSON.parse(localStorage.getItem(SCHED_KEY) || '{}'); } catch(_) { return {}; }
+}
+function saveStudentScheduleLocal(code, start, end) {
+  const map = getStudentSchedules();
+  if (start || end) { map[code] = { scheduledStart: start, scheduledEnd: end }; }
+  else { delete map[code]; }
+  try { localStorage.setItem(SCHED_KEY, JSON.stringify(map)); } catch(_) {}
+}
+function getStudentScheduleLocal(code) {
+  return getStudentSchedules()[code] || { scheduledStart: null, scheduledEnd: null };
+}
+
+/* =========================================================================
    HORARIO INDIVIDUAL POR ALUMNO
    Permite asignar a un alumno específico un horario propio que sobreescribe
    el del examen general. Útil cuando un alumno necesita presentar a deshora,
@@ -3534,7 +3558,6 @@ function saveStudentSchedule() {
   const endVal = document.getElementById('schedEnd').value;
   const newStart = startVal ? new Date(startVal).toISOString() : null;
   const newEnd = endVal ? new Date(endVal).toISOString() : null;
-  // Validar coherencia
   if (newStart && newEnd && new Date(newEnd) <= new Date(newStart)) {
     alert("❌ La fecha de cierre debe ser posterior a la de inicio.");
     return;
@@ -3542,11 +3565,12 @@ function saveStudentSchedule() {
   s.scheduledStart = newStart;
   s.scheduledEnd = newEnd;
   setStudents(list);
-  // Sincronizar inmediatamente a Supabase para que persista entre sesiones
+  // Guardar TAMBIÉN en almacén separado (persiste aunque Supabase sobrescriba los alumnos)
+  saveStudentScheduleLocal(code, newStart, newEnd);
   syncStudentToSupabase(s);
   closeSchedModal();
   if (newStart || newEnd) {
-    showToast("✅ Horario individual guardado en la nube: " + s.name);
+    showToast("✅ Horario individual guardado: " + s.name);
   } else {
     showToast("ℹ️ " + s.name + " usará el horario general del examen");
   }
@@ -3563,6 +3587,7 @@ function clearStudentSchedule() {
   s.scheduledStart = null;
   s.scheduledEnd = null;
   setStudents(list);
+  saveStudentScheduleLocal(code, null, null);  // borrar del almacén separado
   syncStudentToSupabase(s);
   closeSchedModal();
   showToast("🗑️ Horario individual eliminado. " + s.name + " usará el horario general.");
