@@ -9966,39 +9966,53 @@ function loadSupabaseConfigUI() {
   window.syncExamsToSupabase = async function() {
     const sb = getSb(); if (!sb) return;
     const exams = window.getExams ? window.getExams() : {};
-    const ids = Object.keys(exams);
+    const ids = Object.keys(exams).filter(function(k) { return k && k !== 'undefined'; });
     if (!ids.length) { if (window.showToast) window.showToast('No hay exámenes para subir', 'warning'); return; }
     let ok = 0;
-    const activeId = window.getActiveExamId ? window.getActiveExamId() : 'default';
-    for (const id of ids) {
+    const now = new Date().toISOString();
+    for (let i = 0; i < ids.length; i++) {
+      const examId = ids[i];
       try {
         await sb.from('examenes').upsert({
-          exam_id: id, titulo: exams[id].title || 'Examen',
-          contenido: exams[id], activo: id === activeId,
-          actualizado: new Date().toISOString()
-        }, { onConflict: 'exam_id' });
+          id: examId,
+          titulo: (exams[examId] && exams[examId].title) || 'Examen',
+          contenido: exams[examId],
+          actualizado_en: now
+        }, { onConflict: 'id' });
         ok++;
       } catch(e) { console.warn('syncExam error:', e.message); }
     }
-    if (window.showToast) window.showToast('Exámenes subidos: ' + ok, 'success', 3000);
+    if (window.showToast) window.showToast('Exámenes subidos: ' + ok + '/' + ids.length, 'success', 3000);
   };
 
   /* ── Descargar exámenes de Supabase ── */
   window.syncExamsFromSupabase = async function() {
     const sb = getSb(); if (!sb) return;
     try {
-      const { data, error } = await sb.from('examenes').select('*');
+      const { data, error } = await sb.from('examenes').select('id, contenido, actualizado_en');
       if (error) throw error;
       if (!data || !data.length) return;
       const exams = window.getExams ? window.getExams() : {};
-      let added = 0;
-      data.forEach(row => {
-        if (!exams[row.exam_id]) { exams[row.exam_id] = row.contenido; added++; }
-        else { exams[row.exam_id] = row.contenido; } // actualizar siempre
+      let n = 0;
+      data.forEach(function(row) {
+        if (!row.id || !row.contenido) return;
+        const local = exams[row.id];
+        const localTs = (local && local._updatedAt) ? local._updatedAt : 0;
+        const cloudTs = row.actualizado_en ? new Date(row.actualizado_en).getTime() : 0;
+        // Solo sobreescribir si la nube es más reciente
+        if (!local || cloudTs > localTs) {
+          exams[row.id] = Object.assign({}, row.contenido, { _updatedAt: cloudTs });
+          n++;
+        }
       });
-      if (window.saveStore && window.STORE_KEYS) window.saveStore(window.STORE_KEYS.exams, exams);
-      if (added > 0 && window.showToast)
-        window.showToast('Exámenes descargados: ' + added, 'success', 3000);
+      if (n > 0) {
+        // Guardar usando el key correcto
+        const EKEY = 'exam_exams_v1';
+        if (window.saveStore) window.saveStore(EKEY, exams);
+        try { localStorage.setItem('ag_exams_backup', JSON.stringify(exams)); } catch(_) {}
+        if (window.renderExamsList) window.renderExamsList();
+        if (window.showToast) window.showToast('☁️ ' + n + ' examen(es) actualizado(s) desde Supabase', 'success', 3000);
+      }
     } catch(e) { console.warn('syncExamsFrom:', e.message); }
   };
 
@@ -10050,7 +10064,8 @@ function loadSupabaseConfigUI() {
         setTimeout(function() {
           window.syncStudentsFromSupabase();
           window.syncResultsFromSupabase();
-          window.syncExamsFromSupabase();
+          window.syncExamsFromSupabase();   // baja de la nube (usa id correcto)
+          window.syncExamsToSupabase();     // sube lo que falta
         }, 1200);
       };
       window.showAdmin._sb_patched = true;
