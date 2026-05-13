@@ -166,6 +166,21 @@
   body.dark-mode [class^="ag-"] { background: var(--input-bg) !important; color: var(--text) !important; border-color: var(--border) !important; }
   body.dark-mode .ag-score-big, body.dark-mode .ag-score-ok { color: #4ade80 !important; }
   body.dark-mode .ag-score-fail { color: #f87171 !important; }
+  /* ── Inputs de fecha/hora ── */
+  body.dark-mode input[type="datetime-local"],
+  body.dark-mode input[type="date"],
+  body.dark-mode input[type="time"] { background: var(--input-bg) !important; color: var(--text) !important; border-color: var(--border) !important; color-scheme: dark; }
+
+  /* ── Botones y códigos de alumno ── */
+  body.dark-mode .ag-li,
+  body.dark-mode [style*="font-family:monospace"],
+  body.dark-mode [style*="font-family: monospace"] { background: var(--input-bg) !important; color: #60a5fa !important; border-color: var(--border) !important; }
+
+  /* ── Badges de examen (azul claro) ── */
+  body.dark-mode [style*="background:#e8f1f8"],
+  body.dark-mode [style*="background:#dbeafe"],
+  body.dark-mode [style*="background:#eff6ff"] { background: #1e3a5f !important; color: #93c5fd !important; }
+
   body.dark-mode ::-webkit-scrollbar { background: #1a1d27; width: 8px; }
   body.dark-mode ::-webkit-scrollbar-thumb { background: #374151; border-radius: 4px; }
   body.dark-mode ::-webkit-scrollbar-thumb:hover { background: #4b5563; }
@@ -4196,8 +4211,11 @@ function quickToggleExamOpen(examId) {
 }
 
 async function saveExamCfg() {
+  // Capturar el examId INMEDIATAMENTE antes de cualquier operación async
+  // para evitar race condition si el usuario cambia de examen mientras guarda
+  const examId = state.editingExamId;
   const exams = getExams();
-  const target = exams[state.editingExamId];
+  const target = exams[examId];
   if (!target) return;
   const getNum = (id, def) => {
     const el = document.getElementById(id);
@@ -4218,27 +4236,26 @@ async function saveExamCfg() {
     feedbackBonus:  getNum('examCfgFeedbackBonus', 0),
     enableGames:    !!document.getElementById('examCfgEnableGames')?.checked,
   };
-  // Guardar en localStorage
+  // Guardar en localStorage de inmediato (síncrono — siempre funciona)
   setExams(exams);
-  state.bank = target;
+  if (state.editingExamId === examId) state.bank = target;
 
-  // Indicar guardando
+  // Indicar guardando en el botón
   const btn = document.querySelector('[onclick="saveExamCfg()"]');
   const origText = btn ? btn.textContent : '';
   if (btn) { btn.textContent = '⏳ Guardando en la nube…'; btn.disabled = true; }
 
   try {
-    // Esperar a que Supabase confirme (sync inmediato, no debounced)
-    await syncExamToSupabase(state.editingExamId);
+    await syncExamToSupabase(examId);  // usa examId capturado, no state.editingExamId
     if (btn) { btn.textContent = '✅ Guardado'; btn.disabled = false; }
     setTimeout(() => { if (btn) btn.textContent = origText; }, 2500);
-    showToast('✅ Config guardada y sincronizada en la nube: ' + target.title, 'success', 3000);
+    showToast('✅ Config guardada: ' + target.title, 'success', 2000);
   } catch(e) {
-    if (btn) { btn.textContent = '⚠ Solo local (sin nube)'; btn.disabled = false; }
+    if (btn) { btn.textContent = '⚠ Solo local'; btn.disabled = false; }
     setTimeout(() => { if (btn) btn.textContent = origText; }, 3000);
-    showToast('⚠ Config guardada localmente pero no llegó a Supabase: ' + e.message, 'warning', 4000);
+    showToast('⚠ Guardado localmente. Sin conexión a Supabase.', 'warning', 3000);
   }
-  scheduleExamSync(); // también debounce por si acaso
+  scheduleExamSync();
 }
 
 /* =========================================================================
