@@ -19,9 +19,247 @@
     --muted: #5b6470;
     --border: #d8dde6;
     --shadow: 0 4px 18px rgba(31,78,121,0.08);
+    --input-bg: #ffffff;
+    --card-bg: #ffffff;
+    --table-even: #f7f9fc;
   }
+
+  /* ── MODO OSCURO ── */
+  body.dark-mode {
+    --bg: #0f1117;
+    --panel: #1a1d27;
+    --primary: #0f2944;
+    --primary-soft: #1e4a7a;
+    --accent: #e03c3c;
+    --ok: #28a745;
+    --warn: #d4a017;
+    --text: #e2e8f0;
+    --muted: #8896a8;
+    --border: #2d3748;
+    --shadow: 0 4px 18px rgba(0,0,0,.35);
+    --input-bg: #222736;
+    --card-bg: #1a1d27;
+    --table-even: #1e2130;
+    color-scheme: dark;
+    background: var(--bg) !important;
+    color: var(--text) !important;
+  }
+
+  /* ── Todos los elementos base ── */
+  body.dark-mode div:not([class*="topbar"]):not(.admin-tab.active),
+  body.dark-mode section, body.dark-mode article,
+  body.dark-mode aside, body.dark-mode main {
+    background-color: inherit;
+    color: inherit;
+  }
+
+  /* ── Inputs y controles de formulario ── */
+  body.dark-mode input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  body.dark-mode select,
+  body.dark-mode textarea { background: var(--input-bg) !important; color: var(--text) !important; border-color: var(--border) !important; }
+  body.dark-mode input::placeholder, body.dark-mode textarea::placeholder { color: var(--muted) !important; }
+
+  /* ── Cards y containers ── */
+  body.dark-mode .card { background: var(--card-bg) !important; border-color: var(--border) !important; }
+  body.dark-mode .admin-tab-content { background: var(--bg) !important; }
+  body.dark-mode .admin-tab { background: #1a1d27 !important; color: var(--muted) !important; border-color: var(--border) !important; }
+  body.dark-mode .admin-tab.active { background: var(--primary) !important; color: white !important; }
+  body.dark-mode .topbar { background: #0a1628 !important; }
+  body.dark-mode .login-card, body.dark-mode .login-box { background: var(--card-bg) !important; border-color: var(--border) !important; }
+
+  /* ── Tablas ── */
+  body.dark-mode table { color: var(--text) !important; border-color: var(--border) !important; }
+  body.dark-mode th { background: #0f2944 !important; color: white !important; }
+  body.dark-mode td { border-color: var(--border) !important; color: var(--text) !important; background: transparent; }
+  body.dark-mode tr:nth-child(even) td { background: var(--table-even) !important; }
+
+  /* ── Modales ── */
+  body.dark-mode .modal { background: var(--card-bg) !important; color: var(--text) !important; }
+  body.dark-mode .modal-bg { background: rgba(0,0,0,.75) !important; }
+  body.dark-mode #supabaseModal > div,
+  body.dark-mode [id$="Modal"] > div:first-child,
+  body.dark-mode [id$="-modal"] > div:first-child,
+  body.dark-mode #ag-grade-modal > div,
+  body.dark-mode #resultModal > div { background: var(--card-bg) !important; color: var(--text) !important; }
+  body.dark-mode .ag-qc { background: #222736 !important; border-color: var(--border) !important; color: var(--text) !important; }
+
+  /* ── Preguntas alumno ── */
+  body.dark-mode .question { background: var(--card-bg) !important; border-color: var(--border) !important; color: var(--text) !important; }
+  body.dark-mode .option { background: var(--input-bg) !important; border-color: var(--border) !important; color: var(--text) !important; }
+  body.dark-mode .option:hover { background: #2d3748 !important; }
+  body.dark-mode .option.selected { background: #1e3a5f !important; border-color: #3b82f6 !important; }
+  body.dark-mode .option.correct { background: #14532d !important; border-color: #22c55e !important; }
+  body.dark-mode .option.wrong { background: #450a0a !important; border-color: #ef4444 !important; }
+
+  /* ── Hoja de cálculo ── */
+  body.dark-mode .sheet-cell,
+  body.dark-mode .sheet-header-cell { background: var(--input-bg) !important; border-color: var(--border) !important; color: var(--text) !important; }
+  body.dark-mode .sheet-cell:focus { background: #2d3748 !important; }
+
+  /* ── Editor de preguntas ── */
+  body.dark-mode .qe-options > div,
+  body.dark-mode .qe-option,
+  body.dark-mode [class*="qe-"] { background: var(--input-bg) !important; color: var(--text) !important; border-color: var(--border) !important; }
+
+  /* ── Texto y tipografía ── */
+  body.dark-mode p, body.dark-mode span, body.dark-mode label,
+  body.dark-mode h1, body.dark-mode h2, body.dark-mode h3,
+  body.dark-mode h4, body.dark-mode h5, body.dark-mode h6,
+  body.dark-mode li, body.dark-mode td, body.dark-mode th { color: var(--text); }
+  body.dark-mode .muted { color: var(--muted) !important; }
+  body.dark-mode a { color: #60a5fa !important; }
+  body.dark-mode pre, body.dark-mode code { background: #111827 !important; color: #a8ff78 !important; }
+  body.dark-mode details summary { color: var(--text) !important; }
+
+  /* ── Blancos hardcoded con inline style (nuclear) ── */
+  body.dark-mode [style*="background:white"],
+  body.dark-mode [style*="background: white"],
+  body.dark-mode [style*="background:#fff"],
+  body.dark-mode [style*="background: #fff"],
+  body.dark-mode [style*="background:#ffffff"],
+  body.dark-mode [style*="background: #ffffff"],
+  body.dark-mode [style*="background-color:white"],
+  body.dark-mode [style*="background-color: white"],
+  body.dark-mode [style*="background-color:#fff"],
+  body.dark-mode [style*="background-color:#ffffff"] { background: var(--input-bg) !important; color: var(--text) !important; }
+
+  /* ── Colores claros hardcoded con inline style ── */
+  body.dark-mode [style*="background:#f0fdf4"],
+  body.dark-mode [style*="background:#fff8e1"],
+  body.dark-mode [style*="background:#f0f6fc"],
+  body.dark-mode [style*="background:#fff7ed"],
+  body.dark-mode [style*="background:#fef3c7"],
+  body.dark-mode [style*="background:#ecfdf5"],
+  body.dark-mode [style*="background:#fef2f2"],
+  body.dark-mode [style*="background:#eff6ff"],
+  body.dark-mode [style*="background:#f8fafc"],
+  body.dark-mode [style*="background:#f5f5f5"],
+  body.dark-mode [style*="background:#f3f4f6"],
+  body.dark-mode [style*="background:#f2f2f2"],
+  body.dark-mode [style*="background:#e8f1f8"],
+  body.dark-mode [style*="background:#e8f5e9"],
+  body.dark-mode [style*="background:#fefcf8"],
+  body.dark-mode [style*="background:#f7f4ef"],
+  body.dark-mode [style*="background:#fef9c3"],
+  body.dark-mode [style*="background:#d1fae5"],
+  body.dark-mode [style*="background:#fee2e2"],
+  body.dark-mode [style*="background:#dbeafe"],
+  body.dark-mode [style*="background:rgb("] { background: var(--input-bg) !important; color: var(--text) !important; border-color: var(--border) !important; }
+
+  /* ── Alertas y resultados ── */
+  body.dark-mode .alert-row { background: #2d1515 !important; border-color: var(--accent) !important; color: var(--text) !important; }
+  body.dark-mode .alert-list { background: transparent; }
+
+  /* ── Login tabs ── */
+  body.dark-mode .login-tab { background: transparent !important; color: var(--muted) !important; border-color: var(--border) !important; }
+  body.dark-mode .login-tab.active { color: var(--primary-soft, #2e75b6) !important; border-color: var(--primary-soft, #2e75b6) !important; }
+
+  /* ── Footer / créditos ── */
+  body.dark-mode footer, body.dark-mode [style*="text-align:center"][style*="color:#7a8290"],
+  body.dark-mode [style*="background:white"][style*="border-radius:8px"] { background: var(--card-bg) !important; color: var(--muted) !important; }
+
+  /* ── Pantalla de advertencia pre-examen ── */
+  body.dark-mode #screenWarning { background: var(--bg) !important; }
+
+  /* ── Lookup resultado alumno (cajas con código) ── */
+  body.dark-mode .ag-lb, body.dark-mode .ag-li,
+  body.dark-mode [class^="ag-"] { background: var(--input-bg) !important; color: var(--text) !important; border-color: var(--border) !important; }
+  body.dark-mode .ag-score-big, body.dark-mode .ag-score-ok { color: #4ade80 !important; }
+  body.dark-mode .ag-score-fail { color: #f87171 !important; }
+  body.dark-mode ::-webkit-scrollbar { background: #1a1d27; width: 8px; }
+  body.dark-mode ::-webkit-scrollbar-thumb { background: #374151; border-radius: 4px; }
+  body.dark-mode ::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+  /* Cards y containers */
+  body.dark-mode .card,
+  body.dark-mode .module,
+  body.dark-mode [class*="card"] { background: var(--card-bg) !important; border-color: var(--border) !important; color: var(--text); }
+  /* Inputs */
+  body.dark-mode input,
+  body.dark-mode select,
+  body.dark-mode textarea { background: var(--input-bg) !important; color: var(--text) !important; border-color: var(--border) !important; }
+  body.dark-mode input::placeholder,
+  body.dark-mode textarea::placeholder { color: var(--muted); }
+  /* Tabs admin */
+  body.dark-mode .admin-tab { background: #1a1d27 !important; color: var(--muted) !important; border-color: var(--border) !important; }
+  body.dark-mode .admin-tab.active { background: var(--primary) !important; color: white !important; }
+  body.dark-mode .admin-tab-content { background: var(--bg); }
+  /* Tablas */
+  body.dark-mode table { color: var(--text); border-color: var(--border); }
+  body.dark-mode th { background: #0f2944 !important; color: white !important; }
+  body.dark-mode td { border-color: var(--border) !important; color: var(--text); }
+  body.dark-mode tr:nth-child(even) td { background: var(--table-even) !important; }
+  body.dark-mode tr:nth-child(odd) td { background: transparent; }
+  /* Topbars */
+  body.dark-mode .topbar { background: #0a1628 !important; }
+  /* Modales */
+  body.dark-mode #supabaseModal > div { background: #1a1d27 !important; border-color: var(--border); }
+  body.dark-mode .modal-overlay > div,
+  body.dark-mode [id$="Modal"] > div,
+  body.dark-mode [id$="-modal"] > div { background: #1a1d27 !important; }
+  /* Grading modal */
+  body.dark-mode #ag-grade-modal > div { background: #1a1d27 !important; color: var(--text); }
+  body.dark-mode .ag-qc { background: #222736 !important; border-color: var(--border) !important; color: var(--text); }
+  body.dark-mode .ag-qh,
+  body.dark-mode .ag-qn,
+  body.dark-mode .ag-qt { color: var(--text) !important; }
+  /* Login */
+  body.dark-mode .login-card,
+  body.dark-mode .login-box { background: var(--card-bg) !important; border-color: var(--border) !important; }
+  /* Preguntas alumno */
+  body.dark-mode .question { background: var(--card-bg) !important; border-color: var(--border) !important; }
+  body.dark-mode .option { background: var(--input-bg) !important; border-color: var(--border) !important; color: var(--text) !important; }
+  body.dark-mode .option:hover { background: #2d3748 !important; }
+  body.dark-mode .option.selected { background: #1e3a5f !important; border-color: #3b82f6 !important; }
+  /* Resultados modal alumno */
+  body.dark-mode #resultModal > div,
+  body.dark-mode .result-card { background: var(--card-bg) !important; border-color: var(--border) !important; }
+  /* Misc texto */
+  body.dark-mode pre,
+  body.dark-mode code { background: #111827 !important; color: #a8ff78; }
+  body.dark-mode .muted { color: var(--muted) !important; }
+  body.dark-mode h1, body.dark-mode h2, body.dark-mode h3,
+  body.dark-mode h4, body.dark-mode label,
+  body.dark-mode p, body.dark-mode span:not(.badge):not(.badge-count):not(.admin-tab) { color: var(--text); }
+  body.dark-mode details summary { color: var(--text); }
+  body.dark-mode a { color: #60a5fa; }
+  /* Cajas de info dentro de tarjetas */
+  body.dark-mode [style*="background:#f0fdf4"],
+  body.dark-mode [style*="background:#fff8e1"],
+  body.dark-mode [style*="background:#f0f6fc"],
+  body.dark-mode [style*="background:#fff7ed"],
+  body.dark-mode [style*="background:#fef3c7"],
+  body.dark-mode [style*="background:#ecfdf5"],
+  body.dark-mode [style*="background:#fef2f2"],
+  body.dark-mode [style*="background:#eff6ff"],
+  body.dark-mode [style*="background:#f8fafc"],
+  body.dark-mode [style*="background:#f5f5f5"],
+  body.dark-mode [style*="background:#f3f4f6"],
+  body.dark-mode [style*="background:#e8f1f8"],
+  body.dark-mode [style*="background:#f2f2f2"],
+  body.dark-mode [style*="background:white"],
+  body.dark-mode [style*="background:#ffffff"],
+  body.dark-mode [style*="background:#fefcf8"],
+  body.dark-mode [style*="background:#f7f4ef"] { background: var(--input-bg) !important; color: var(--text) !important; border-color: var(--border) !important; }
+  /* Toasts y badges */
+  body.dark-mode .badge-count { background: #374151; }
+  /* Scroll */
+  body.dark-mode ::-webkit-scrollbar { background: #1a1d27; }
+  body.dark-mode ::-webkit-scrollbar-thumb { background: #374151; border-radius: 4px; }
+    background: rgba(255,255,255,.12);
+    border: 1px solid rgba(255,255,255,.2);
+    border-radius: 20px;
+    padding: 4px 10px;
+    font-size: 14px;
+    color: white;
+    cursor: pointer;
+    transition: background .2s;
+  }
+  .dark-toggle:hover { background: rgba(255,255,255,.22); }
   * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, system-ui, Arial, sans-serif; background: var(--bg); color: var(--text); }
+  html, body { margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, system-ui, Arial, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+  html { background: var(--bg); }
+  body.dark-mode, body.dark-mode html { background: #0f1117 !important; }
+  html:has(body.dark-mode) { background: #0f1117 !important; }
   button { font: inherit; cursor: pointer; }
   input, select, textarea { font: inherit; }
   .hidden { display: none !important; }
@@ -155,7 +393,7 @@
     align-items: center; justify-content: center; z-index: 100; padding: 16px;
   }
   .modal {
-    background: white; border-radius: 14px; max-width: 460px; width: 100%;
+    background: var(--panel, white); border-radius: 14px; max-width: 460px; width: 100%;
     padding: 28px; box-shadow: 0 20px 60px rgba(0,0,0,.3);
   }
   .modal h2 { margin-top: 0; }
@@ -687,7 +925,11 @@
 
 <!-- ================= LOGIN ================= -->
 <div id="screenLogin" class="container">
-  <div class="card" style="max-width: 480px; margin: 60px auto;">
+  <!-- Barra minimal con toggle de modo oscuro -->
+  <div style="display:flex;justify-content:flex-end;padding:12px 0 0">
+    <button class="dark-toggle" onclick="toggleDarkMode()" style="background:rgba(31,78,121,.12);border:1px solid rgba(31,78,121,.2);color:var(--text);" title="Cambiar modo claro/oscuro" id="darkToggleLogin">🌙</button>
+  </div>
+  <div class="card" style="max-width: 480px; margin: 20px auto;">
     <div class="center" style="margin-bottom: 8px">
       <div style="display:inline-flex;align-items:center;gap:10px;background:linear-gradient(135deg,#1f4e79,#2e75b6);color:white;padding:10px 18px;border-radius:10px;font-weight:800;font-size:20px;letter-spacing:.5px;box-shadow:0 2px 8px rgba(31,78,121,.25)">
         🛡️ AcadGuard
@@ -798,7 +1040,8 @@
   <div class="topbar">
     <div class="brand">🛡️ AcadGuard · Panel del Administrador</div>
     <div class="right">
-      <span id="supabaseTopBadge" title="Estado de Supabase" style="font-size:11px;padding:3px 10px;border-radius:999px;background:rgba(255,255,255,.15);color:rgba(255,255,255,.8);cursor:pointer" onclick="switchAdminTab('config')">⚫ Supabase</span>
+      <span id="supabaseTopBadge" title="Configurar Supabase" style="font-size:11px;padding:3px 10px;border-radius:999px;background:rgba(255,255,255,.15);color:rgba(255,255,255,.8);cursor:pointer" onclick="openSupabaseModal()">⚫ Supabase</span>
+      <button class="dark-toggle" onclick="toggleDarkMode()" id="darkToggleAdmin" title="Cambiar modo claro/oscuro">🌙</button>
       <span class="badge" id="adminUserBadge"></span>
       <button class="btn btn-ghost btn-sm" onclick="logout()" style="color:white;border-color:rgba(255,255,255,.5)">Salir</button>
     </div>
@@ -807,8 +1050,7 @@
   <div class="container">
     <!-- Pestañas de navegación -->
     <div class="admin-tabs" id="adminTabs">
-      <button class="admin-tab active" data-tab="config" onclick="switchAdminTab('config')">⚙️ Configuración</button>
-      <button class="admin-tab" data-tab="exams" onclick="switchAdminTab('exams')">📚 Exámenes <span class="badge-count" id="tabBadgeExams">0</span></button>
+      <button class="admin-tab active" data-tab="exams" onclick="switchAdminTab('exams')">📚 Exámenes <span class="badge-count" id="tabBadgeExams">0</span></button>
       <button class="admin-tab" data-tab="games" onclick="switchAdminTab('games')">🎮 Juegos & Trivias</button>
       <button class="admin-tab" data-tab="students" onclick="switchAdminTab('students')">👥 Alumnos <span class="badge-count" id="tabBadgeStudents">0</span></button>
       <button class="admin-tab" data-tab="results" onclick="switchAdminTab('results')">📊 Resultados <span class="badge-count" id="tabBadgeResults">0</span></button>
@@ -816,115 +1058,33 @@
       <button class="admin-tab" data-tab="alerts" onclick="switchAdminTab('alerts')">🚨 Alertas <span class="badge-count" id="tabBadgeAlerts">0</span></button>
     </div>
 
-    <!-- Pestaña: Configuración -->
-    <div class="admin-tab-content active" data-tab-content="config">
-    <div class="card">
-      <h2>📋 Configuración del examen</h2>
-      <div class="grid-2">
-        <div>
-          <label>Tiempo total (minutos)</label>
-          <input id="cfgMinutes" type="number" min="1" value="120">
-        </div>
-        <div>
-          <label>Inactividad antes de advertir (segundos)</label>
-          <input id="cfgIdle" type="number" min="3" value="10">
-        </div>
-        <div>
-          <label>Máximo de alertas antes de auto-envío</label>
-          <input id="cfgMaxAlerts" type="number" min="1" value="3">
-        </div>
-        <div>
-          <label>Calificación mínima aprobatoria</label>
-          <input id="cfgPass" type="number" min="0" max="100" value="70">
-        </div>
-        <div>
-          <label>⏸️ Cuenta regresiva en advertencias (segundos)</label>
-          <input id="cfgWarnCountdown" type="number" min="0" max="60" value="5">
-          <p class="muted" style="font-size:11px;margin-top:2px">Tiempo que el alumno debe esperar antes de poder cerrar una advertencia. El cronómetro del examen se pausa durante este tiempo.</p>
-        </div>
-        <div>
-          <label>⚠️ Penalización por advertencia (alertas)</label>
-          <input id="cfgWarnPenalty" type="number" min="0" max="10" value="1">
-          <p class="muted" style="font-size:11px;margin-top:2px">Cuántas alertas se suman al contador al terminar la cuenta regresiva de cada advertencia. Default: 1.</p>
-        </div>
-        <div>
-          <label>⏱️ Tiempo límite para responder pop-ups (seg)</label>
-          <input id="cfgPopupTimeout" type="number" min="0" max="60" value="10">
-          <p class="muted" style="font-size:11px;margin-top:2px">Si el alumno deja abierto el modal de "Entregar" o "Salir" más de este tiempo sin elegir, se cierra y se le aplica penalización.</p>
-        </div>
-        <div style="grid-column:1 / -1;background:#fff8e1;border:1px solid #f0d986;border-radius:8px;padding:12px;margin-top:6px">
-          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin:0">
-            <input id="cfgBonusEnabled" type="checkbox" style="width:auto;transform:scale(1.3)">
-            <b>🎮 Habilitar juegos bonus arcade entre secciones</b>
-          </label>
-          <p class="muted" style="font-size:12px;margin:8px 0 6px">
-            Al completar cada sección, el alumno tiene la opción de jugar un mini-juego arcade.
-            Si gana, recibe puntos extra. Hay 5 juegos diferentes que rotan.
-          </p>
-          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-            <label style="margin:0">Puntos extra por juego ganado (default):</label>
-            <input id="cfgBonusPoints" type="number" min="0" max="20" value="1" style="width:80px">
+    <!-- Modal de Supabase (se abre desde el badge en la barra superior) -->
+    <div id="supabaseModal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px" onclick="if(event.target===this)closeSupabaseModal()">
+      <div style="background:white;border-radius:12px;width:100%;max-width:660px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.4)">
+        <div style="background:#065f46;color:white;padding:16px 20px;border-radius:12px 12px 0 0;display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div style="font-weight:700;font-size:16px">🌐 Supabase — Sincronización en la nube</div>
+            <div id="supabaseBadgeModal" style="font-size:11px;margin-top:3px;opacity:.8">Estado: verificando...</div>
           </div>
-          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px">
-            <label style="margin:0">⏰ Aviso por inactividad en crucigrama/sopa (seg):</label>
-            <input id="cfgGameIdleSeconds" type="number" min="10" max="120" value="30" style="width:80px">
+          <button onclick="closeSupabaseModal()" style="background:none;border:none;color:white;font-size:22px;cursor:pointer;line-height:1">×</button>
+        </div>
+        <div style="padding:20px">
+          <p style="font-size:13px;color:#444;margin-bottom:12px">Con Supabase, los resultados y exámenes se sincronizan automáticamente en la nube. Los cambios en exámenes se guardan aunque el docente abra AcadGuard en otro dispositivo o en modo incógnito.</p>
+
+          <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px;margin-bottom:14px;font-size:13px">
+            <b style="color:#14532d">🚀 Configuración rápida:</b>
+            <ol style="margin:6px 0 0;padding-left:20px;line-height:2">
+              <li>Ve a <a href="https://supabase.com" target="_blank" style="color:#059669">supabase.com</a> y crea una cuenta gratis</li>
+              <li>Crea un nuevo proyecto</li>
+              <li>En <b>SQL Editor</b> ejecuta el script de abajo</li>
+              <li>En <b>Project Settings → API</b> copia URL y Anon Key</li>
+              <li>Pégalos aquí y haz clic en <b>Guardar y conectar</b></li>
+            </ol>
           </div>
-          <p class="muted" style="font-size:11px;margin-top:6px">Si el alumno está jugando un crucigrama o sopa de letras y no hace nada por este tiempo, le aparece un aviso visible recordándole que el cronómetro del examen sigue corriendo.</p>
-        </div>
-        <div>
-          <label>🔁 Tiempo límite de reingreso (minutos)</label>
-          <input id="cfgReentryMinutes" type="number" min="0" max="60" value="2">
-          <p class="muted" style="font-size:11px;margin-top:2px">Tras salir, el alumno tiene este tiempo para reingresar sin pedir autorización. Después necesita que el docente le autorice. El cronómetro NO se pausa.</p>
-        </div>
-        <div>
-          <label>🚪 Penalización por salir del examen (alertas)</label>
-          <input id="cfgExitPenalty" type="number" min="0" max="10" value="5">
-          <p class="muted" style="font-size:11px;margin-top:2px">Alertas que se suman si el alumno confirma salir o cierra el navegador.</p>
-        </div>
-        <div>
-          <label>📅 Fecha y hora de inicio del examen (opcional)</label>
-          <input id="cfgScheduledStart" type="datetime-local">
-          <p class="muted" style="font-size:11px;margin-top:2px">Si se establece, los alumnos no podrán entrar antes de esta fecha/hora. Déjalo vacío para permitir entrada en cualquier momento.</p>
-        </div>
-        <div>
-          <label>⏰ Fecha y hora de cierre del examen (opcional)</label>
-          <input id="cfgScheduledEnd" type="datetime-local">
-          <p class="muted" style="font-size:11px;margin-top:2px">Si se establece, los alumnos no podrán entrar después de esta fecha/hora.</p>
-        </div>
-      </div>
-      <div style="background:#f0f6fc;border:1px solid #bfdbfe;border-radius:8px;padding:10px 14px;margin:10px 0">
-        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:600">
-          <input type="checkbox" id="cfgEnforceSchedule" style="width:16px;height:16px">
-          <span>🗓️ Aplicar horario programado</span>
-        </label>
-        <p class="muted" style="font-size:11px;margin:6px 0 0 26px">
-          Si está <b>activado</b>, solo se puede entrar entre el inicio y cierre configurados arriba.<br>
-          Si está <b>desactivado</b>, los alumnos pueden ingresar en cualquier momento (ignora las fechas).</p>
-      </div>
-      <button class="btn btn-primary" style="margin-top: 14px;" onclick="saveConfig()">💾 Guardar configuración</button>
-      <span id="cfgSaved" class="save-indicator hidden"> ✓ Guardado</span>
-    </div>
 
-    <!-- Supabase -->
-    <div class="card" style="border-top:4px solid #3ecf8e">
-      <h2 style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-        <span>🌐 Supabase — Sincronización en la nube</span>
-        <span id="supabaseBadge" style="font-size:12px;padding:3px 12px;border-radius:999px;font-weight:700;background:#e8f5e9;color:#1e7e34">⚙️ Sin configurar</span>
-      </h2>
-      <p class="muted">Con Supabase los resultados de los 50 alumnos llegan automáticamente a tu base de datos en la nube. Cada vez que un alumno entrega el examen, su resultado se sube en segundos aunque estén en distintas computadoras.</p>
-
-      <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:14px;margin:12px 0;font-size:13px">
-        <b style="color:#14532d">🚀 Configuración rápida (5 minutos):</b>
-        <ol style="margin:8px 0 0;padding-left:20px;line-height:2">
-          <li>Ve a <a href="https://supabase.com" target="_blank" style="color:#059669">supabase.com</a> y crea una cuenta gratis</li>
-          <li>Crea un nuevo proyecto (elige la región más cercana)</li>
-          <li>Ve a <b>SQL Editor</b> y ejecuta el script que aparece abajo</li>
-          <li>Ve a <b>Project Settings → API</b> y copia la URL y el Anon Key</li>
-          <li>Pégalos aquí y haz click en <b>Guardar y conectar</b></li>
-        </ol>
-      </div>
-
-      <div style="background:#1a1a1a;color:#a8ff78;border-radius:8px;padding:14px;font-family:monospace;font-size:12px;margin:12px 0;overflow-x:auto;white-space:pre">-- Ejecuta esto en Supabase → SQL Editor
+          <details style="margin-bottom:14px">
+            <summary style="cursor:pointer;font-weight:600;font-size:13px;color:#065f46">📜 Ver SQL — ejecutar en Supabase SQL Editor</summary>
+            <div style="background:#1a1a1a;color:#a8ff78;border-radius:8px;padding:12px;font-family:monospace;font-size:11px;margin-top:8px;overflow-x:auto;white-space:pre">-- Tabla de resultados de alumnos
 CREATE TABLE resultados (
   id             uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   creado_en      timestamptz DEFAULT now(),
@@ -946,38 +1106,51 @@ CREATE TABLE resultados (
   retroalimentacion_docente jsonb,
   integridad     text
 );
-
--- Permitir que alumnos inserten y docente lea
 ALTER TABLE resultados ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "alumnos_insert" ON resultados FOR INSERT TO anon WITH CHECK (true);
-CREATE POLICY "docente_select" ON resultados FOR SELECT TO anon USING (true);</div>
+CREATE POLICY "docente_select" ON resultados FOR SELECT TO anon USING (true);
+CREATE POLICY "docente_delete"  ON resultados FOR DELETE TO anon USING (true);
+CREATE POLICY "docente_update"  ON resultados FOR UPDATE TO anon USING (true);
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0">
-        <div>
-          <label for="cfgSupabaseUrl">URL del proyecto</label>
-          <input id="cfgSupabaseUrl" type="text" placeholder="https://xxxxxxxxxxxx.supabase.co" style="font-size:13px;font-family:monospace">
-        </div>
-        <div>
-          <label for="cfgSupabaseKey">Anon Key (clave pública)</label>
-          <input id="cfgSupabaseKey" type="text" placeholder="eyJhbGciOiJIUzI1NiIs..." style="font-size:13px;font-family:monospace">
-          <p class="muted" style="font-size:11px;margin-top:3px">Esta clave es pública y segura para usar en el navegador.</p>
-        </div>
-      </div>
+-- Tabla de alumnos
+ALTER TABLE alumnos ADD COLUMN IF NOT EXISTS disabled boolean DEFAULT false;
+ALTER TABLE alumnos ADD COLUMN IF NOT EXISTS disabled_reason text;
 
-      <div style="display:flex;gap:10px;flex-wrap:wrap">
-        <button class="btn btn-primary" onclick="saveSupabaseConfig()" style="background:#059669;border-color:#059669">💾 Guardar y conectar</button>
-        <button class="btn btn-ghost" onclick="testSupabaseConnection()">🔌 Probar conexión</button>
-        <button class="btn btn-ghost" onclick="syncFromSupabase()" style="color:#2e75b6;border-color:#2e75b6">🔄 Traer resultados de la nube</button>
-        <button class="btn btn-ghost" onclick="pushAllResultsToSupabase()" title="Sube al servidor todos los resultados guardados localmente">⬆️ Subir locales a la nube</button>
+-- Tabla de exámenes (para sync entre dispositivos)
+CREATE TABLE IF NOT EXISTS examenes (
+  id             text PRIMARY KEY,
+  titulo         text,
+  contenido      jsonb,
+  actualizado_en timestamptz DEFAULT now()
+);
+ALTER TABLE examenes ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "allow_all_examenes" ON examenes FOR ALL USING (true) WITH CHECK (true);</div>
+          </details>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+            <div>
+              <label style="font-size:13px;font-weight:600">URL del proyecto</label>
+              <input id="cfgSupabaseUrl" type="text" placeholder="https://xxxx.supabase.co" style="font-size:12px;font-family:monospace;margin-top:4px">
+            </div>
+            <div>
+              <label style="font-size:13px;font-weight:600">Anon Key (clave pública)</label>
+              <input id="cfgSupabaseKey" type="text" placeholder="eyJhbGciOiJIUzI1NiIs..." style="font-size:12px;font-family:monospace;margin-top:4px">
+            </div>
+          </div>
+
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+            <button class="btn btn-primary" onclick="saveSupabaseConfig()" style="background:#059669;border-color:#059669">💾 Guardar y conectar</button>
+            <button class="btn btn-ghost" onclick="testSupabaseConnection()">🔌 Probar conexión</button>
+            <button class="btn btn-ghost" onclick="syncFromSupabase()" style="color:#2e75b6;border-color:#2e75b6">🔄 Traer resultados de la nube</button>
+            <button class="btn btn-ghost" onclick="pushAllResultsToSupabase()">⬆️ Subir locales a la nube</button>
+          </div>
+
+          <button class="btn btn-primary" onclick="exportWithSupabase()" style="background:#1f4e79;border-color:#1f4e79;width:100%">📦 Generar archivo para GitHub (con Supabase integrado)</button>
+          <p style="font-size:11px;color:#666;margin-top:6px">Genera un sistema_examen.html con tus credenciales ya integradas. Súbelo a GitHub Pages y todos los alumnos se conectarán automáticamente.</p>
+          <div id="supabaseStatus" style="margin-top:10px;font-size:13px"></div>
+        </div>
       </div>
-      <div style="margin-top:10px">
-        <button class="btn btn-primary" onclick="exportWithSupabase()" style="background:#1f4e79;border-color:#1f4e79;width:100%" title="Genera un archivo HTML con Supabase ya integrado para subir a GitHub">📦 Generar archivo para GitHub (con Supabase integrado)</button>
-        <p class="muted" style="font-size:12px;margin-top:6px">Este botón genera un <code>sistema_examen.html</code> con tus credenciales ya integradas. Súbelo a GitHub y todos los alumnos se conectarán automáticamente sin configurar nada.</p>
-      </div>
-      <div id="supabaseStatus" style="margin-top:10px;font-size:13px"></div>
     </div>
-
-    </div> <!-- /admin-tab-content config -->
 
     <!-- Pestaña: Juegos & Trivias -->
     <div class="admin-tab-content" data-tab-content="games">
@@ -992,7 +1165,7 @@ CREATE POLICY "docente_select" ON resultados FOR SELECT TO anon USING (true);</d
     </div> <!-- /admin-tab-content games -->
 
     <!-- Pestaña: Exámenes -->
-    <div class="admin-tab-content" data-tab-content="exams">
+    <div class="admin-tab-content active" data-tab-content="exams">
     <div class="card">
       <h2>📚 Mis exámenes</h2>
       <p class="muted">Administra todos tus exámenes desde aquí. El examen "activo" es el que se asigna a nuevos alumnos por defecto.</p>
@@ -1027,10 +1200,16 @@ CREATE POLICY "docente_select" ON resultados FOR SELECT TO anon USING (true);</d
 
       <!-- Programación de fecha y hora del examen -->
       <div style="background:#eaf2fb;border:1px solid #b0c8e2;border-radius:8px;padding:14px;margin-bottom:14px">
-        <h3 style="margin:0 0 8px;color:#1f4e79">📅 Programación de inicio y cierre</h3>
-        <p class="muted" style="font-size:12px;margin:0 0 10px">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:10px">
+          <h3 style="margin:0;color:#1f4e79">📅 Programación de inicio y cierre</h3>
+          <!-- Botón grande de acceso abierto / cerrado -->
+          <button id="examScheduleToggleBtn" onclick="toggleExamScheduleOpen()" style="font-size:13px;font-weight:700;padding:8px 18px;border-radius:8px;border:2px solid;cursor:pointer;transition:all .2s">
+            ⏳ Cargando…
+          </button>
+        </div>
+        <p class="muted" style="font-size:12px;margin:0 0 10px" id="examScheduleToggleDesc">
           Si configuras estas fechas, los alumnos asignados a este examen <b>SÓLO podrán ingresar</b> entre el inicio y el cierre.
-          Déjalas vacías si quieres permitir entrada en cualquier momento.
+          Activa <b>"Acceso abierto"</b> para ignorar el horario y permitir entrada en cualquier momento.
         </p>
         <div class="grid-2" style="gap:10px">
           <div>
@@ -1232,6 +1411,7 @@ CREATE POLICY "docente_select" ON resultados FOR SELECT TO anon USING (true);</d
     <div class="right">
       <span class="badge" id="studentBadge"></span>
       <span id="timerDisplay" class="timer">00:00</span>
+      <button class="dark-toggle" onclick="toggleDarkMode()" title="Cambiar modo claro/oscuro">🌙</button>
       <button class="btn btn-danger btn-sm" onclick="confirmSubmit()">Entregar</button>
     </div>
   </div>
@@ -2703,7 +2883,8 @@ function loginStudent() {
   // JERARQUÍA DE HORARIOS:
   // 1. Horario individual del alumno (student.scheduledStart/End) — máxima prioridad
   // Validar horario solo si enforceSchedule está activo (default: true)
-  if (state.config.enforceSchedule !== false) {
+  // Y solo si el examen no tiene acceso abierto (scheduleOpen)
+  if (state.config.enforceSchedule !== false && !exam.scheduleOpen) {
     let examStart = null, scheduleSource = '';
     if (student.scheduledStart) {
       examStart = student.scheduledStart; scheduleSource = 'individual';
@@ -3490,9 +3671,17 @@ function renderBankVisual() {
 function renderQuestionEditorBody(q, si, qi) {
   if (q.type === 'mc' || q.type === 'calc') {
     let h = `<div class="qe-options">`;
+    // Ambos tipos (mc y calc) tienen el checkbox para activar la regla 1/3+2/3
+    const isChecked = q.requiresReview ? 'checked' : '';
+    const labelText = q.type === 'calc'
+      ? '🔍 <b>Requiere revisión de procedimiento</b>'
+      : '🔍 <b>Requiere revisión de procedimiento</b>';
+    const helpText = q.type === 'calc'
+      ? 'Se recomienda activar: 1/3 automático si elige la correcta + 2/3 según el procedimiento en la hoja de cálculo.'
+      : 'Activa si quieres que el alumno deba mostrar el procedimiento para obtener los puntos completos. Regla 1/3 automático + 2/3 manual.';
     h += `<label style="display:flex;align-items:flex-start;gap:8px;background:#fff7ed;border:1px solid #fdba74;border-radius:6px;padding:8px 10px;margin:4px 0 10px;font-size:13px;cursor:pointer">
-      <input type="checkbox" ${q.requiresReview ? 'checked' : ''} onchange="editQuestionRequiresReview(${si},${qi},this.checked)" style="margin-top:3px">
-      <span><b>🔍 Requiere revisión de procedimiento</b><br><small style="color:#92400e">Inicia en 0 pts aunque el alumno marque la opción correcta. El docente debe revisar el procedimiento para otorgar puntos.</small></span>
+      <input type="checkbox" ${isChecked} onchange="editQuestionRequiresReview(${si},${qi},this.checked)" style="margin-top:3px">
+      <span>${labelText}<br><small style="color:#92400e">${helpText}</small></span>
     </label>`;
     h += `<p class="muted" style="font-size:12px;margin:4px 0">Marca la opción correcta con el círculo de la izquierda:</p>`;
     (q.options || []).forEach((opt, oi) => {
@@ -3790,22 +3979,6 @@ function showAdmin() {
   document.getElementById('screenWarning').classList.add('hidden');
   document.getElementById('screenAdmin').classList.remove('hidden');
   document.getElementById('adminUserBadge').textContent = "👤 " + state.user;
-  document.getElementById('cfgMinutes').value = state.config.minutes;
-  document.getElementById('cfgIdle').value = state.config.idle;
-  document.getElementById('cfgMaxAlerts').value = state.config.maxAlerts;
-  document.getElementById('cfgPass').value = state.config.pass;
-  document.getElementById('cfgWarnCountdown').value = state.config.warnCountdown != null ? state.config.warnCountdown : 5;
-  document.getElementById('cfgWarnPenalty').value = state.config.warnPenalty != null ? state.config.warnPenalty : 1;
-  document.getElementById('cfgPopupTimeout').value = state.config.popupTimeout != null ? state.config.popupTimeout : 10;
-  document.getElementById('cfgBonusEnabled').checked = state.config.bonusGamesEnabled !== false;
-  document.getElementById('cfgBonusPoints').value = state.config.bonusPoints != null ? state.config.bonusPoints : 1;
-  const giEl = document.getElementById('cfgGameIdleSeconds');
-  if (giEl) giEl.value = state.config.gameIdleSeconds != null ? state.config.gameIdleSeconds : 30;
-  document.getElementById('cfgReentryMinutes').value = state.config.reentryMinutes != null ? state.config.reentryMinutes : 2;
-  document.getElementById('cfgExitPenalty').value = state.config.exitPenalty != null ? state.config.exitPenalty : 5;
-  document.getElementById('cfgScheduledStart').value = isoToLocalInput(state.config.scheduledStart);
-  document.getElementById('cfgScheduledEnd').value = isoToLocalInput(state.config.scheduledEnd);
-  document.getElementById('cfgEnforceSchedule').checked = state.config.enforceSchedule !== false;
   // Supabase
   loadSupabaseConfigUI();
   // Asegurar que el examen activo esté cargado en state.bank para edición
@@ -3826,10 +3999,13 @@ function showAdmin() {
   if (_sb) {
     syncStudentsFromSupabase();
     syncFromSupabase();
+    loadExamsFromSupabase();
   }
 
+  // Restaurar la pestaña activa — ya no hay 'config', mapearla a 'exams'
   let savedTab = null;
   try { savedTab = localStorage.getItem('adminActiveTab'); } catch(_) {}
+  if (savedTab === 'config') savedTab = 'exams'; // migrate old saved value
   if (savedTab && document.querySelector(`#adminTabs .admin-tab[data-tab="${savedTab}"]`)) {
     switchAdminTab(savedTab);
   }
@@ -3849,6 +4025,8 @@ function updateExamEditorTitle() {
   const shuffleSEl = document.getElementById('examShuffleSections');
   if (shuffleQEl) shuffleQEl.checked = !!(exam && exam.shuffleQuestions);
   if (shuffleSEl) shuffleSEl.checked = !!(exam && exam.shuffleSections);
+  // Actualizar el botón de acceso abierto / con horario
+  updateScheduleToggleUI(exam);
   // Llenar campos de configuración específica del examen
   const cfg = (exam && exam.config) || {};
   const G = state.config; // defaults globales
@@ -3924,6 +4102,63 @@ function saveExamShuffle() {
   showToast("✓ Aleatorización guardada");
 }
 
+/* ── Toggle acceso abierto / con horario ── */
+function updateScheduleToggleUI(exam) {
+  const btn = document.getElementById('examScheduleToggleBtn');
+  if (!btn) return;
+  const isOpen = exam && exam.scheduleOpen === true;
+  const hasSchedule = exam && (exam.scheduledStart || exam.scheduledEnd);
+  if (isOpen) {
+    btn.textContent = '🟢 Acceso abierto — clic para aplicar horario';
+    btn.style.background = '#d1fae5';
+    btn.style.borderColor = '#10b981';
+    btn.style.color = '#065f46';
+  } else if (hasSchedule) {
+    btn.textContent = '⏰ Con horario — clic para abrir acceso';
+    btn.style.background = '#fef3c7';
+    btn.style.borderColor = '#f59e0b';
+    btn.style.color = '#92400e';
+  } else {
+    btn.textContent = '🔓 Sin horario — entrada libre';
+    btn.style.background = '#f1f5f9';
+    btn.style.borderColor = '#94a3b8';
+    btn.style.color = '#475569';
+  }
+}
+
+function toggleExamScheduleOpen() {
+  const exams = getExams();
+  const target = exams[state.editingExamId];
+  if (!target) return;
+  target.scheduleOpen = !target.scheduleOpen;
+  setExams(exams);
+  state.bank = target;
+  updateScheduleToggleUI(target);
+  scheduleExamSync();
+  renderExamsList();
+  const msg = target.scheduleOpen
+    ? '🟢 Acceso abierto — los alumnos pueden entrar en cualquier momento (se ignora el horario)'
+    : '⏰ Horario activado — los alumnos solo pueden entrar dentro del rango programado';
+  showToast(msg, target.scheduleOpen ? 'success' : 'warning', 3500);
+}
+
+/* Cambio rápido desde la lista de exámenes (sin abrir el editor) */
+function quickToggleExamOpen(examId) {
+  const exams = getExams();
+  const target = exams[examId];
+  if (!target) return;
+  target.scheduleOpen = !target.scheduleOpen;
+  setExams(exams);
+  if (state.editingExamId === examId) {
+    state.bank = target;
+    updateScheduleToggleUI(target);
+  }
+  scheduleExamSync && scheduleExamSync();
+  renderExamsList();
+  const msg = target.scheduleOpen ? '🟢 Acceso abierto' : '⏰ Horario aplicado';
+  showToast(msg + ' — ' + target.title, target.scheduleOpen ? 'success' : 'warning', 2500);
+}
+
 function saveExamCfg() {
   const exams = getExams();
   const target = exams[state.editingExamId];
@@ -3984,11 +4219,19 @@ function renderExamsList() {
     const numS = studs.filter(s => (s.examId || activeId) === ex.id).length;
     const isActive = ex.id === activeId;
     const isEditing = ex.id === state.editingExamId;
+    const schedOpen = ex.scheduleOpen === true;
+    const hasSchedule = ex.scheduledStart || ex.scheduledEnd;
+    const scheduleBadge = hasSchedule
+      ? (schedOpen
+          ? `<span style="background:#d1fae5;color:#065f46;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;cursor:pointer" onclick="quickToggleExamOpen('${ex.id}')" title="Clic para cambiar a Horario programado">🟢 Acceso abierto</span>`
+          : `<span style="background:#fef3c7;color:#92400e;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;cursor:pointer" onclick="quickToggleExamOpen('${ex.id}')" title="Clic para abrir acceso">⏰ Con horario</span>`)
+      : '';
     return `<div class="exam-card ${isEditing ? 'editing' : ''} ${isActive ? 'active' : ''}" data-id="${ex.id}">
       <input class="exam-title-input" type="text" value="${escapeHTML(ex.title)}" onchange="renameExamTitle('${ex.id}', this.value)">
       ${isActive ? '<span class="badge-active">★ Activo</span>' : ''}
       <span class="badge-questions">${numQ} preguntas</span>
       <span class="badge-students">${numS} alumno(s)</span>
+      ${scheduleBadge}
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         ${isEditing ? '<button class="btn btn-sm btn-primary" disabled>✏️ Editando</button>'
                     : `<button class="btn btn-sm btn-primary" onclick="editExam('${ex.id}')">✏️ Editar</button>`}
@@ -4077,31 +4320,33 @@ function renameExamTitle(id, newTitle) {
 }
 
 function saveConfig() {
-  // Convertir datetime-local a ISO o null si está vacío
-  const startVal = document.getElementById('cfgScheduledStart').value;
-  const endVal = document.getElementById('cfgScheduledEnd').value;
-  state.config = {
-    minutes: parseInt(document.getElementById('cfgMinutes').value) || 120,
-    idle: parseInt(document.getElementById('cfgIdle').value) || 10,
-    maxAlerts: parseInt(document.getElementById('cfgMaxAlerts').value) || 3,
-    pass: parseInt(document.getElementById('cfgPass').value) || 70,
-    warnCountdown: Math.max(0, parseInt(document.getElementById('cfgWarnCountdown').value) || 5),
-    warnPenalty: Math.max(0, parseInt(document.getElementById('cfgWarnPenalty').value) || 1),
-    popupTimeout: Math.max(0, parseInt(document.getElementById('cfgPopupTimeout').value) || 10),
-    bonusGamesEnabled: document.getElementById('cfgBonusEnabled').checked,
-    bonusPoints: Math.max(0, parseInt(document.getElementById('cfgBonusPoints').value) || 1),
-    gameIdleSeconds: Math.max(10, Math.min(120, parseInt((document.getElementById('cfgGameIdleSeconds') || {value: 30}).value) || 30)),
-    reentryMinutes: Math.max(0, parseInt(document.getElementById('cfgReentryMinutes').value) || 2),
-    exitPenalty: Math.max(0, parseInt(document.getElementById('cfgExitPenalty').value) || 5),
-    scheduledStart: startVal ? new Date(startVal).toISOString() : null,
-    scheduledEnd: endVal ? new Date(endVal).toISOString() : null,
-    enforceSchedule: document.getElementById('cfgEnforceSchedule').checked
-  };
+  // saveConfig ahora solo persiste la config global (valores por defecto).
+  // La configuración de cada examen se guarda en saveExamCfg() dentro del editor de examen.
   saveStore(STORE_KEYS.config, state.config);
-  const el = document.getElementById('cfgSaved');
-  el.classList.remove('hidden');
-  setTimeout(() => el.classList.add('hidden'), 1500);
 }
+
+// ── MODO OSCURO / CLARO ──────────────────────────────────────
+function toggleDarkMode() {
+  const isDark = document.body.classList.toggle('dark-mode');
+  document.documentElement.style.background = isDark ? '#0f1117' : '';
+  try { localStorage.setItem('acadguard_dark', isDark ? '1' : '0'); } catch(_) {}
+  const icon = isDark ? '☀️' : '🌙';
+  document.querySelectorAll('.dark-toggle').forEach(b => b.textContent = icon);
+}
+// Aplicar preferencia guardada (o del sistema)
+(function initDarkMode() {
+  let pref = null;
+  try { pref = localStorage.getItem('acadguard_dark'); } catch(_) {}
+  const prefersDark = pref !== null ? pref === '1' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+  if (prefersDark) {
+    document.body.classList.add('dark-mode');
+    document.documentElement.style.background = '#0f1117';
+    document.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('.dark-toggle').forEach(b => b.textContent = '☀️');
+    });
+    document.querySelectorAll('.dark-toggle').forEach(b => b.textContent = '☀️');
+  }
+})();
 
 /* Convierte ISO a formato datetime-local para inputs (YYYY-MM-DDTHH:mm) */
 function isoToLocalInput(iso) {
@@ -5293,8 +5538,8 @@ function submitExam(reason) {
   state.bank.sections.forEach(sec => sec.questions.forEach(q => {
     if (q.type === 'mc' || q.type === 'calc') {
       maxMC += q.points;
-      // calc SIEMPRE usa regla 1/3+2/3 (hoja de cálculo = procedimiento obligatorio)
-      const needsReview = q.type === 'calc' || q.requiresReview;
+      // calc y mc usan requiresReview para controlar si aplica la regla 1/3+2/3
+      const needsReview = !!q.requiresReview;
       if (needsReview) {
         pendingReview.push(q.id);
         if (state.session.answers[q.id] === q.correct) {
@@ -9289,10 +9534,27 @@ function updateSupabaseBadge(status) {
     none:     { text: '⚙️ Sin configurar',         bg: '#f1f5f9', color: '#475569', topBg: 'rgba(255,255,255,.1)', topColor: 'rgba(255,255,255,.6)' }
   };
   const s = styles[status] || styles.none;
-  const badge = document.getElementById('supabaseBadge');
   const topBadge = document.getElementById('supabaseTopBadge');
-  if (badge) { badge.textContent = s.text; badge.style.background = s.bg; badge.style.color = s.color; }
+  const modalBadge = document.getElementById('supabaseBadgeModal');
   if (topBadge) { topBadge.textContent = s.text; topBadge.style.background = s.topBg; topBadge.style.color = s.topColor; }
+  if (modalBadge) { modalBadge.textContent = 'Estado: ' + s.text; }
+}
+
+function openSupabaseModal() {
+  const modal = document.getElementById('supabaseModal');
+  if (modal) { modal.classList.remove('hidden'); modal.style.display = 'flex'; }
+  // Pre-fill fields with current config
+  const url = state.config.supabaseUrl || '';
+  const key = state.config.supabaseKey || '';
+  const urlEl = document.getElementById('cfgSupabaseUrl');
+  const keyEl = document.getElementById('cfgSupabaseKey');
+  if (urlEl) urlEl.value = url;
+  if (keyEl) keyEl.value = key;
+}
+
+function closeSupabaseModal() {
+  const modal = document.getElementById('supabaseModal');
+  if (modal) { modal.classList.add('hidden'); modal.style.display = 'none'; }
 }
 
 // Guarda las credenciales y reconecta
@@ -9372,7 +9634,7 @@ async function syncResultToSupabase(result) {
 // Descarga todos los resultados de Supabase y los fusiona con los locales
 async function syncFromSupabase() {
   if (!_sb) {
-    showToast('Configura Supabase primero en la pestaña ⚙️ Configuración', 'warning', 4000);
+    showToast('Configura Supabase primero — haz clic en el botón 🟢/⚙️ Supabase en la barra superior', 'warning', 4000);
     return;
   }
   const statusDiv = document.getElementById('supabaseStatus');
@@ -10077,8 +10339,8 @@ window.agOpen=function(idx){
       var ms=r.manualScores?r.manualScores[q.id]:undefined;
       var earned=0, ch="";
       if(q.type==="mc"||q.type==="calc"){
-        // calc SIEMPRE requiere revisión de procedimiento; mc lo requiere si tiene el checkbox
-        var isMcReview=q.type==="calc"||!!q.requiresReview;
+        // calc y mc: usa requiresReview para decidir si aplica 1/3+2/3
+        var isMcReview=!!q.requiresReview;
         var autoMax=isMcReview?Math.round(pts/3):pts;  // 1/3 automático
         var manualMax=isMcReview?(pts-autoMax):0;       // 2/3 procedimiento
         var autoEarned=isMcReview?((ans===q.correct)?autoMax:0):((ans===q.correct)?pts:0);
