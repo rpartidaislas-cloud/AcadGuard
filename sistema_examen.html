@@ -2874,11 +2874,12 @@ function loginStudent() {
     const btn = document.getElementById('loginStudentBtn');
     if (btn) { btn.disabled = true; btn.textContent = '⏳ Verificando...'; }
 
-    let students = getStudents();  // usa getStudents() para incluir backup de localStorage
+    let students = getStudents();
     let student = students.find(s => s.code.toUpperCase() === code);
 
-    // Si no está local y Supabase está configurado → buscar en la nube
-    if (!student && _sb) {
+    // SIEMPRE consultar Supabase para obtener el horario individual más reciente
+    // (el dispositivo del alumno puede tener una copia local sin el horario)
+    if (_sb) {
       try {
         const { data, error } = await _sb
           .from('alumnos')
@@ -2886,19 +2887,26 @@ function loginStudent() {
           .eq('codigo', code)
           .maybeSingle();
         if (!error && data) {
-          // Convertir formato Supabase → formato interno (incluyendo horario individual)
-          student = {
-            name:           data.nombre,
-            code:           data.codigo,
-            examId:         data.examen_id || getActiveExamId(),
-            disabled:       data.disabled || false,
-            disabledReason: data.disabled_reason || '',
-            scheduledStart: data.scheduled_start || null,
-            scheduledEnd:   data.scheduled_end   || null
-          };
-          // Guardar localmente para acelerar próximos accesos
-          students.push(student);
-          setStudents(students);  // usa setStudents() para también guardar el backup
+          if (student) {
+            // Alumno encontrado local: actualizar SOLO el horario desde Supabase
+            student.scheduledStart = data.scheduled_start || null;
+            student.scheduledEnd   = data.scheduled_end   || null;
+            student.disabled       = data.disabled || false;
+            student.disabledReason = data.disabled_reason || '';
+          } else {
+            // Alumno no estaba local: crear desde Supabase
+            student = {
+              name:           data.nombre,
+              code:           data.codigo,
+              examId:         data.examen_id || getActiveExamId(),
+              disabled:       data.disabled || false,
+              disabledReason: data.disabled_reason || '',
+              scheduledStart: data.scheduled_start || null,
+              scheduledEnd:   data.scheduled_end   || null
+            };
+            students.push(student);
+            setStudents(students);
+          }
         }
       } catch (e) {
         console.warn('Supabase student lookup error:', e.message);
