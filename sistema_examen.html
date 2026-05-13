@@ -2874,7 +2874,7 @@ function loginStudent() {
     const btn = document.getElementById('loginStudentBtn');
     if (btn) { btn.disabled = true; btn.textContent = '⏳ Verificando...'; }
 
-    let students = loadStore(STORE_KEYS.students, []);
+    let students = getStudents();  // usa getStudents() para incluir backup de localStorage
     let student = students.find(s => s.code.toUpperCase() === code);
 
     // Si no está local y Supabase está configurado → buscar en la nube
@@ -2886,17 +2886,19 @@ function loginStudent() {
           .eq('codigo', code)
           .maybeSingle();
         if (!error && data) {
-          // Convertir formato Supabase → formato interno
+          // Convertir formato Supabase → formato interno (incluyendo horario individual)
           student = {
-            name: data.nombre,
-            code: data.codigo,
-            examId: data.examen_id || getActiveExamId(),
-            disabled: data.disabled || false,
-            disabledReason: data.disabled_reason || ''
+            name:           data.nombre,
+            code:           data.codigo,
+            examId:         data.examen_id || getActiveExamId(),
+            disabled:       data.disabled || false,
+            disabledReason: data.disabled_reason || '',
+            scheduledStart: data.scheduled_start || null,
+            scheduledEnd:   data.scheduled_end   || null
           };
           // Guardar localmente para acelerar próximos accesos
           students.push(student);
-          saveStore(STORE_KEYS.students, students);
+          setStudents(students);  // usa setStudents() para también guardar el backup
         }
       } catch (e) {
         console.warn('Supabase student lookup error:', e.message);
