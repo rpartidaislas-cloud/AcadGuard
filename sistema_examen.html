@@ -1201,15 +1201,18 @@ CREATE POLICY "allow_all_examenes" ON examenes FOR ALL USING (true) WITH CHECK (
       <!-- Programación de fecha y hora del examen -->
       <div style="background:#eaf2fb;border:1px solid #b0c8e2;border-radius:8px;padding:14px;margin-bottom:14px">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:10px">
-          <h3 style="margin:0;color:#1f4e79">📅 Programación de inicio y cierre</h3>
+          <div>
+            <h3 style="margin:0;color:#1f4e79">📅 Programación de inicio y cierre</h3>
+            <div style="font-size:12px;color:#5b6470;margin-top:3px">Examen: <b id="scheduleExamLabel" style="color:#1f4e79">—</b></div>
+          </div>
           <!-- Botón grande de acceso abierto / cerrado -->
           <button id="examScheduleToggleBtn" onclick="toggleExamScheduleOpen()" style="font-size:13px;font-weight:700;padding:8px 18px;border-radius:8px;border:2px solid;cursor:pointer;transition:all .2s">
             ⏳ Cargando…
           </button>
         </div>
         <p class="muted" style="font-size:12px;margin:0 0 10px" id="examScheduleToggleDesc">
-          Si configuras estas fechas, los alumnos asignados a este examen <b>SÓLO podrán ingresar</b> entre el inicio y el cierre.
-          Activa <b>"Acceso abierto"</b> para ignorar el horario y permitir entrada en cualquier momento.
+          Si configuras estas fechas, los alumnos de <b>este examen</b> SÓLO podrán ingresar entre el inicio y el cierre.
+          Activa <b>"Acceso abierto"</b> para ignorar el horario cuando lo necesites.
         </p>
         <div class="grid-2" style="gap:10px">
           <div>
@@ -1221,7 +1224,10 @@ CREATE POLICY "allow_all_examenes" ON examenes FOR ALL USING (true) WITH CHECK (
             <input id="examScheduledEnd" type="datetime-local" onchange="saveExamSchedule()">
           </div>
         </div>
-        <p id="examScheduleMsg" class="muted" style="margin:8px 0 0;font-size:12px"></p>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;flex-wrap:wrap;gap:8px">
+          <p id="examScheduleMsg" class="muted" style="margin:0;font-size:12px"></p>
+          <button onclick="clearExamSchedule()" style="font-size:12px;background:none;border:1px solid #c00000;color:#c00000;border-radius:6px;padding:4px 12px;cursor:pointer">🗑️ Limpiar fechas de este examen</button>
+        </div>
       </div>
 
       <!-- ── Configuración específica del examen ── -->
@@ -2881,18 +2887,14 @@ function loginStudent() {
     }
 
   // JERARQUÍA DE HORARIOS:
-  // 1. Horario individual del alumno (student.scheduledStart/End) — máxima prioridad
-  // Validar horario solo si enforceSchedule está activo (default: true)
-  // Y solo si el examen no tiene acceso abierto (scheduleOpen)
+  // 1. Horario individual del alumno — máxima prioridad
+  // 2. Horario del examen específico
+  // El horario es EXCLUSIVAMENTE por examen — no hay fallback global.
+  // Validar horario solo si enforceSchedule está activo y el examen no tiene acceso abierto.
   if (state.config.enforceSchedule !== false && !exam.scheduleOpen) {
-    let examStart = null, scheduleSource = '';
-    if (student.scheduledStart) {
-      examStart = student.scheduledStart; scheduleSource = 'individual';
-    } else if (exam.scheduledStart) {
-      examStart = exam.scheduledStart; scheduleSource = 'examen';
-    } else if (state.config.scheduledStart) {
-      examStart = state.config.scheduledStart; scheduleSource = 'global';
-    }
+    // ── Validar INICIO ──
+    const examStart = student.scheduledStart || exam.scheduledStart || null;
+    const scheduleSource = student.scheduledStart ? 'individual' : 'examen';
     if (examStart) {
       const start = new Date(examStart);
       if (Date.now() < start.getTime()) {
@@ -2902,15 +2904,13 @@ function loginStudent() {
         const tiempoMsg = hrs > 0 ? `${hrs} h ${remMins} min` : `${mins} min`;
         const headerMsg = scheduleSource === 'individual' ? "⏰ Tu acceso especial aún no inicia." : "⏰ El examen aún no inicia.";
         alert(headerMsg + "\n\nExamen: " + exam.title + "\n" +
-          (scheduleSource === 'individual' ? "Tu horario asignado por el docente: " : "Fecha de inicio: ") + start.toLocaleString() +
+          (scheduleSource === 'individual' ? "Tu horario asignado: " : "Fecha de inicio: ") + start.toLocaleString() +
           "\n\nFaltan aproximadamente " + tiempoMsg + ". Espera a que llegue la hora.");
         return;
       }
     }
-    let examEnd = null;
-    if (student.scheduledEnd) examEnd = student.scheduledEnd;
-    else if (exam.scheduledEnd) examEnd = exam.scheduledEnd;
-    else if (state.config.scheduledEnd) examEnd = state.config.scheduledEnd;
+    // ── Validar CIERRE ──
+    const examEnd = student.scheduledEnd || exam.scheduledEnd || null;
     if (examEnd) {
       const end = new Date(examEnd);
       if (Date.now() > end.getTime()) {
@@ -3115,14 +3115,15 @@ function showWarningScreen() {
   document.getElementById('warnExitPenalty').textContent = state.config.exitPenalty != null ? state.config.exitPenalty : 5;
   document.getElementById('warnReentry').textContent = state.config.reentryMinutes != null ? state.config.reentryMinutes : 2;
 
-  // Mostrar fecha programada si existe
+  // Mostrar fecha programada del examen (solo fuente del examen, no global)
   const schedEl = document.getElementById('warnSchedule');
-  if (state.config.scheduledStart) {
-    const start = new Date(state.config.scheduledStart);
+  const activeExam = state.bank;
+  const examScheduleStart = activeExam && activeExam.scheduledStart;
+  const examScheduleEnd = activeExam && activeExam.scheduledEnd;
+  if (examScheduleStart) {
+    const start = new Date(examScheduleStart);
     let scheduleText = '📅 Inicio programado: ' + start.toLocaleString();
-    if (state.config.scheduledEnd) {
-      scheduleText += ' · Cierre: ' + new Date(state.config.scheduledEnd).toLocaleString();
-    }
+    if (examScheduleEnd) scheduleText += ' · Cierre: ' + new Date(examScheduleEnd).toLocaleString();
     schedEl.textContent = scheduleText;
   } else {
     schedEl.textContent = '';
@@ -4015,6 +4016,9 @@ function updateExamEditorTitle() {
   const exam = getExam(state.editingExamId);
   const el = document.getElementById('editingExamTitle');
   if (el) el.textContent = exam ? exam.title : "—";
+  // Mostrar el nombre del examen en la sección de programación
+  const schedLabel = document.getElementById('scheduleExamLabel');
+  if (schedLabel) schedLabel.textContent = exam ? exam.title : "—";
   // Llenar también los inputs de programación con los valores del examen
   const startInput = document.getElementById('examScheduledStart');
   const endInput = document.getElementById('examScheduledEnd');
@@ -4086,8 +4090,29 @@ function saveExamSchedule() {
   }
   setExams(exams);
   state.bank = target;
+  scheduleExamSync();  // sync a Supabase
+  renderExamsList();
   updateExamEditorTitle();
-  showToast("✓ Programación guardada");
+  showToast("✓ Programación guardada para: " + target.title, 'success', 2000);
+}
+
+/* Limpia el horario del examen que se está editando */
+function clearExamSchedule() {
+  if (!confirm("¿Borrar las fechas de este examen?\n\nLos alumnos podrán ingresar en cualquier momento (sin horario programado).")) return;
+  const exams = getExams();
+  const target = exams[state.editingExamId];
+  if (!target) return;
+  target.scheduledStart = null;
+  target.scheduledEnd = null;
+  target.scheduleOpen = false;
+  setExams(exams);
+  state.bank = target;
+  document.getElementById('examScheduledStart').value = '';
+  document.getElementById('examScheduledEnd').value = '';
+  scheduleExamSync();
+  renderExamsList();
+  updateExamEditorTitle();
+  showToast("✓ Fechas borradas de: " + target.title, 'success', 2000);
 }
 
 function saveExamShuffle() {
@@ -4706,9 +4731,8 @@ function startStudentSession(name) {
     scheduled = new Date(student.scheduledStart).getTime();
   } else if (exam && exam.scheduledStart) {
     scheduled = new Date(exam.scheduledStart).getTime();
-  } else if (state.config.scheduledStart) {
-    scheduled = new Date(state.config.scheduledStart).getTime();
   }
+  // El horario es exclusivamente por examen — sin fallback global
   const examStart = scheduled;
   const effectiveStart = (examStart && examStart < Date.now()) ? examStart : Date.now();
 
