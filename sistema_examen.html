@@ -4195,7 +4195,7 @@ function quickToggleExamOpen(examId) {
   showToast(msg + ' — ' + target.title, target.scheduleOpen ? 'success' : 'warning', 2500);
 }
 
-function saveExamCfg() {
+async function saveExamCfg() {
   const exams = getExams();
   const target = exams[state.editingExamId];
   if (!target) return;
@@ -4218,12 +4218,27 @@ function saveExamCfg() {
     feedbackBonus:  getNum('examCfgFeedbackBonus', 0),
     enableGames:    !!document.getElementById('examCfgEnableGames')?.checked,
   };
+  // Guardar en localStorage
   setExams(exams);
   state.bank = target;
-  // Sync inmediato + debounced (doble seguro)
-  syncExamToSupabase(state.editingExamId);
-  scheduleExamSync();
-  showToast('✓ Config guardada: ' + target.title, 'success', 1500);
+
+  // Indicar guardando
+  const btn = document.querySelector('[onclick="saveExamCfg()"]');
+  const origText = btn ? btn.textContent : '';
+  if (btn) { btn.textContent = '⏳ Guardando en la nube…'; btn.disabled = true; }
+
+  try {
+    // Esperar a que Supabase confirme (sync inmediato, no debounced)
+    await syncExamToSupabase(state.editingExamId);
+    if (btn) { btn.textContent = '✅ Guardado'; btn.disabled = false; }
+    setTimeout(() => { if (btn) btn.textContent = origText; }, 2500);
+    showToast('✅ Config guardada y sincronizada en la nube: ' + target.title, 'success', 3000);
+  } catch(e) {
+    if (btn) { btn.textContent = '⚠ Solo local (sin nube)'; btn.disabled = false; }
+    setTimeout(() => { if (btn) btn.textContent = origText; }, 3000);
+    showToast('⚠ Config guardada localmente pero no llegó a Supabase: ' + e.message, 'warning', 4000);
+  }
+  scheduleExamSync(); // también debounce por si acaso
 }
 
 /* =========================================================================
@@ -9583,13 +9598,23 @@ async function syncExamToSupabase(examId) {
       contenido: exam,
       actualizado_en: new Date(now).toISOString()
     }, { onConflict: 'id' });
-    if (error) console.warn('Error sync examen a Supabase:', error.message);
-    else if (window.showToast) showToast('✅ Examen guardado en la nube', 'success', 1800);
+    if (error) {
+      console.warn('Error sync examen a Supabase:', error.message);
+      throw new Error(error.message);
+    }
+    else if (window.showToast) showToast('☁️ Examen guardado en Supabase', 'success', 1500);
   } catch (e) { console.warn('syncExamToSupabase error:', e.message); }
 }
 
 async function loadExamsFromSupabase() {
   if (!_sb) return;
+  // Mostrar indicador de carga si es la primera carga (sin datos locales)
+  const localExams = getExams();
+  const isEmpty = Object.keys(localExams).length === 0;
+  if (isEmpty) {
+    const syncBtn = document.getElementById('syncAllBtn');
+    if (syncBtn) { syncBtn.textContent = '⏳ Cargando…'; syncBtn.disabled = true; }
+  }
   try {
     const { data, error } = await _sb.from('examenes').select('id, contenido, actualizado_en');
     if (error || !data || !data.length) return;
@@ -9613,6 +9638,12 @@ async function loadExamsFromSupabase() {
       if (typeof renderExamsList === 'function') renderExamsList();
     }
   } catch (e) { console.warn('loadExamsFromSupabase error:', e.message); }
+  finally {
+    const syncBtn = document.getElementById('syncAllBtn');
+    if (syncBtn && syncBtn.textContent.includes('Cargando')) {
+      syncBtn.textContent = '🔄 Sincronizar'; syncBtn.disabled = false;
+    }
+  }
 }
 
 // Actualiza los badges visuales de estado de conexión
