@@ -2682,11 +2682,10 @@ function createExam(title) {
 
 function deleteExam(id) {
   const exams = getExams();
-  if (Object.keys(exams).length <= 1) {
+  if (Object.keys(exams).filter(k => k !== 'undefined').length <= 1) {
     alert("No puedes eliminar el último examen. Crea otro antes.");
     return;
   }
-  // Verificar si hay alumnos asignados
   const studs = getStudents();
   const assigned = studs.filter(s => s.examId === id);
   if (assigned.length > 0) {
@@ -2694,9 +2693,12 @@ function deleteExam(id) {
   }
   delete exams[id];
   setExams(exams);
-  // Si era el activo, cambiar al primero disponible
+  // Borrar también en Supabase
+  if (_sb) _sb.from('examenes').delete().eq('id', id).then(({error}) => {
+    if (error) console.warn('Error borrando examen en Supabase:', error.message);
+  });
   if (getActiveExamId() === id) {
-    setActiveExamId(Object.keys(exams)[0]);
+    setActiveExamId(Object.keys(exams).filter(k => k !== 'undefined')[0] || 'default');
   }
 }
 
@@ -3290,11 +3292,21 @@ function addStudent() {
 function removeStudent(code) {
   if (!confirm("¿Eliminar este alumno?")) return;
   setStudents(getStudents().filter(s => s.code !== code));
+  // Borrar también en Supabase
+  if (_sb) _sb.from('alumnos').delete().eq('codigo', code).then(({error}) => {
+    if (error) console.warn('Error borrando alumno en Supabase:', error.message);
+  });
 }
 
 function clearStudents() {
   if (!confirm("¿Borrar TODOS los alumnos registrados?")) return;
   setStudents([]);
+  try { localStorage.setItem('ag_students_backup', '[]'); } catch(_) {}
+  // Borrar todos en Supabase
+  if (_sb) _sb.from('alumnos').delete().not('codigo', 'is', null).then(({error}) => {
+    if (error) console.warn('Error borrando alumnos en Supabase:', error.message);
+    else showToast('🗑️ Alumnos eliminados de Supabase también', 'success', 2000);
+  });
 }
 
 function importStudents(ev) {
