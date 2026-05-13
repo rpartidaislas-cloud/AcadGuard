@@ -1236,35 +1236,35 @@ CREATE POLICY "allow_all_examenes" ON examenes FOR ALL USING (true) WITH CHECK (
         <div class="grid-2" style="gap:10px">
           <div>
             <label>⏱ Duración (minutos)</label>
-            <input id="examCfgMinutes" type="number" min="5" max="480" placeholder="Ej. 120" oninput="saveExamCfg()">
+            <input id="examCfgMinutes" type="number" min="5" max="480" placeholder="Ej. 120" onchange="saveExamCfg()">
           </div>
           <div>
             <label>🎯 Calificación mínima aprobatoria</label>
-            <input id="examCfgPass" type="number" min="0" max="100" placeholder="Ej. 70" oninput="saveExamCfg()">
+            <input id="examCfgPass" type="number" min="0" max="100" placeholder="Ej. 70" onchange="saveExamCfg()">
           </div>
           <div>
             <label>🚨 Máx. alertas antes de auto-envío</label>
-            <input id="examCfgMaxAlerts" type="number" min="1" max="20" placeholder="Ej. 3" oninput="saveExamCfg()">
+            <input id="examCfgMaxAlerts" type="number" min="1" max="20" placeholder="Ej. 3" onchange="saveExamCfg()">
           </div>
           <div>
             <label>⚠️ Penalización por advertencia</label>
-            <input id="examCfgWarnPenalty" type="number" min="1" max="10" placeholder="Ej. 1" oninput="saveExamCfg()">
+            <input id="examCfgWarnPenalty" type="number" min="1" max="10" placeholder="Ej. 1" onchange="saveExamCfg()">
           </div>
           <div>
             <label>🚪 Penalización por salir del examen</label>
-            <input id="examCfgExitPenalty" type="number" min="1" max="10" placeholder="Ej. 5" oninput="saveExamCfg()">
+            <input id="examCfgExitPenalty" type="number" min="1" max="10" placeholder="Ej. 5" onchange="saveExamCfg()">
           </div>
           <div>
             <label>🔁 Tiempo límite de reingreso (min)</label>
-            <input id="examCfgReentry" type="number" min="0" max="60" placeholder="Ej. 2" oninput="saveExamCfg()">
+            <input id="examCfgReentry" type="number" min="0" max="60" placeholder="Ej. 2" onchange="saveExamCfg()">
           </div>
           <div>
             <label>⏸ Inactividad antes de advertir (seg)</label>
-            <input id="examCfgIdle" type="number" min="5" max="300" placeholder="Ej. 10" oninput="saveExamCfg()">
+            <input id="examCfgIdle" type="number" min="5" max="300" placeholder="Ej. 10" onchange="saveExamCfg()">
           </div>
           <div>
             <label>⏳ Cuenta regresiva en advertencias (seg)</label>
-            <input id="examCfgWarnCountdown" type="number" min="0" max="60" placeholder="Ej. 5" oninput="saveExamCfg()">
+            <input id="examCfgWarnCountdown" type="number" min="0" max="60" placeholder="Ej. 5" onchange="saveExamCfg()">
           </div>
         </div>
         <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:12px">
@@ -1274,11 +1274,11 @@ CREATE POLICY "allow_all_examenes" ON examenes FOR ALL USING (true) WITH CHECK (
           </label>
           <div style="display:flex;align-items:center;gap:6px;font-size:13px">
             <label for="examCfgGameBonus" style="white-space:nowrap">Pts por juego ganado:</label>
-            <input id="examCfgGameBonus" type="number" min="0" max="20" placeholder="1" oninput="saveExamCfg()" style="width:60px">
+            <input id="examCfgGameBonus" type="number" min="0" max="20" placeholder="1" onchange="saveExamCfg()" style="width:60px">
           </div>
           <div style="display:flex;align-items:center;gap:6px;font-size:13px">
             <label for="examCfgFeedbackBonus" style="white-space:nowrap">🗒 Pts por retroalimentación:</label>
-            <input id="examCfgFeedbackBonus" type="number" min="0" max="20" placeholder="0" oninput="saveExamCfg()" style="width:60px">
+            <input id="examCfgFeedbackBonus" type="number" min="0" max="20" placeholder="0" onchange="saveExamCfg()" style="width:60px">
           </div>
         </div>
         <p class="muted" style="font-size:11px;margin-top:8px">Estos valores aplican SOLO a este examen. Déjalos vacíos para usar la configuración global.</p>
@@ -4090,7 +4090,9 @@ function saveExamSchedule() {
   }
   setExams(exams);
   state.bank = target;
-  scheduleExamSync();  // sync a Supabase
+  // Sync inmediato a Supabase (no solo debounced) para que no se pierda el horario
+  syncExamToSupabase(state.editingExamId);
+  scheduleExamSync();
   renderExamsList();
   updateExamEditorTitle();
   showToast("✓ Programación guardada para: " + target.title, 'success', 2000);
@@ -4189,7 +4191,9 @@ function saveExamCfg() {
   const target = exams[state.editingExamId];
   if (!target) return;
   const getNum = (id, def) => {
-    const v = parseFloat(document.getElementById(id)?.value);
+    const el = document.getElementById(id);
+    if (!el || el.value === '') return def;
+    const v = parseFloat(el.value);
     return isNaN(v) ? def : v;
   };
   target.config = {
@@ -4207,7 +4211,10 @@ function saveExamCfg() {
   };
   setExams(exams);
   state.bank = target;
+  // Sync inmediato + debounced (doble seguro)
+  syncExamToSupabase(state.editingExamId);
   scheduleExamSync();
+  showToast('✓ Config guardada: ' + target.title, 'success', 1500);
 }
 
 /* =========================================================================
@@ -9513,14 +9520,20 @@ function scheduleExamSync() {
 
 async function syncExamToSupabase(examId) {
   if (!_sb) return;
-  const exam = getExams()[examId];
+  const exams = getExams();
+  const exam = exams[examId];
   if (!exam) return;
   try {
+    const now = Date.now();
+    // Marcar localmente con timestamp antes de subir
+    exam._updatedAt = now;
+    exams[examId] = exam;
+    setExams(exams);
     const { error } = await _sb.from('examenes').upsert({
       id: examId,
       titulo: exam.title || '',
       contenido: exam,
-      actualizado_en: new Date().toISOString()
+      actualizado_en: new Date(now).toISOString()
     }, { onConflict: 'id' });
     if (error) console.warn('Error sync examen a Supabase:', error.message);
     else if (window.showToast) showToast('✅ Examen guardado en la nube', 'success', 1800);
@@ -9530,21 +9543,26 @@ async function syncExamToSupabase(examId) {
 async function loadExamsFromSupabase() {
   if (!_sb) return;
   try {
-    const { data, error } = await _sb.from('examenes').select('id, contenido');
+    const { data, error } = await _sb.from('examenes').select('id, contenido, actualizado_en');
     if (error || !data || !data.length) return;
     const exams = getExams();
     let n = 0;
     for (const row of data) {
-      if (row.id && row.contenido) {
-        // Supabase tiene versión más reciente si no la tenemos localmente
-        exams[row.id] = row.contenido;
+      if (!row.id || !row.contenido) continue;
+      const local = exams[row.id];
+      // Solo sobreescribir si la nube es MÁS RECIENTE que la versión local
+      // _updatedAt se guarda en cada syncExamToSupabase
+      const localTs  = (local && local._updatedAt) ? local._updatedAt : 0;
+      const cloudTs  = row.actualizado_en ? new Date(row.actualizado_en).getTime() : 0;
+      if (!local || cloudTs > localTs) {
+        exams[row.id] = { ...row.contenido, _updatedAt: cloudTs };
         n++;
       }
     }
     if (n > 0) {
       setExams(exams);
-      console.info('✅', n, 'examen(es) cargado(s) desde Supabase');
-      if (typeof renderExamList === 'function') renderExamList();
+      console.info('✅', n, 'examen(es) actualizado(s) desde Supabase (más recientes)');
+      if (typeof renderExamsList === 'function') renderExamsList();
     }
   } catch (e) { console.warn('loadExamsFromSupabase error:', e.message); }
 }
