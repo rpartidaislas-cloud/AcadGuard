@@ -1283,6 +1283,9 @@ CREATE POLICY "allow_all_examenes" ON examenes FOR ALL USING (true) WITH CHECK (
           </div>
         </div>
         <p class="muted" style="font-size:11px;margin-top:8px">Estos valores aplican SOLO a este examen. Déjalos vacíos para usar la configuración global.</p>
+        <div style="text-align:right;margin-top:10px">
+          <button onclick="saveExamCfg()" style="background:#1f4e79;color:white;border:none;border-radius:7px;padding:9px 24px;font-size:13px;font-weight:700;cursor:pointer;transition:opacity .2s" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">💾 Guardar configuración del examen</button>
+        </div>
       </div>
       <div style="background:#f0f6fc;border:1px solid #bfdbfe;border-radius:8px;padding:10px 14px;margin:10px 0">
         <div style="font-weight:700;font-size:13px;margin-bottom:8px">🔀 Aleatorización (anti-copia)</div>
@@ -4013,7 +4016,9 @@ function showAdmin() {
   }
 }
 
-function updateExamEditorTitle() {
+function updateExamEditorTitle(opts) {
+  // opts.skipConfig = true → no resetear los campos de config (útil al guardar horario)
+  const skipConfig = opts && opts.skipConfig;
   const exam = getExam(state.editingExamId);
   const el = document.getElementById('editingExamTitle');
   if (el) el.textContent = exam ? exam.title : "—";
@@ -4033,24 +4038,27 @@ function updateExamEditorTitle() {
   // Actualizar el botón de acceso abierto / con horario
   updateScheduleToggleUI(exam);
   // Llenar campos de configuración específica del examen
-  const cfg = (exam && exam.config) || {};
-  const G = state.config; // defaults globales
-  const setV = (id, key, def) => {
-    const el = document.getElementById(id);
-    if (el) el.value = cfg[key] !== undefined ? cfg[key] : (G[key] !== undefined ? G[key] : def);
-  };
-  setV('examCfgMinutes',       'minutes',       120);
-  setV('examCfgPass',          'pass',          70);
-  setV('examCfgMaxAlerts',     'maxAlerts',     3);
-  setV('examCfgWarnPenalty',   'warnPenalty',   1);
-  setV('examCfgExitPenalty',   'exitPenalty',   5);
-  setV('examCfgReentry',       'reentryMinutes',2);
-  setV('examCfgIdle',          'idle',          10);
-  setV('examCfgWarnCountdown', 'warnCountdown', 5);
-  setV('examCfgGameBonus',     'gameBonusPts',  1);
-  setV('examCfgFeedbackBonus', 'feedbackBonus', 0);
-  const egEl = document.getElementById('examCfgEnableGames');
-  if (egEl) egEl.checked = cfg.enableGames !== undefined ? !!cfg.enableGames : !!G.enableGames;
+  // (solo si no se indicó skipConfig, para no sobreescribir cambios en curso)
+  if (!skipConfig) {
+    const cfg = (exam && exam.config) || {};
+    const G = state.config; // defaults globales
+    const setV = (id, key, def) => {
+      const el = document.getElementById(id);
+      if (el) el.value = cfg[key] !== undefined ? cfg[key] : (G[key] !== undefined ? G[key] : def);
+    };
+    setV('examCfgMinutes',       'minutes',       120);
+    setV('examCfgPass',          'pass',          70);
+    setV('examCfgMaxAlerts',     'maxAlerts',     3);
+    setV('examCfgWarnPenalty',   'warnPenalty',   1);
+    setV('examCfgExitPenalty',   'exitPenalty',   5);
+    setV('examCfgReentry',       'reentryMinutes',2);
+    setV('examCfgIdle',          'idle',          10);
+    setV('examCfgWarnCountdown', 'warnCountdown', 5);
+    setV('examCfgGameBonus',     'gameBonusPts',  1);
+    setV('examCfgFeedbackBonus', 'feedbackBonus', 0);
+    const egEl = document.getElementById('examCfgEnableGames');
+    if (egEl) egEl.checked = cfg.enableGames !== undefined ? !!cfg.enableGames : !!G.enableGames;
+  }
   // Mensaje informativo sobre el estado de programación
   const msg = document.getElementById('examScheduleMsg');
   if (msg && exam) {
@@ -4095,7 +4103,7 @@ function saveExamSchedule() {
   syncExamToSupabase(state.editingExamId);
   scheduleExamSync();
   renderExamsList();
-  updateExamEditorTitle();
+  updateExamEditorTitle({ skipConfig: true }); // no resetear la config mientras el usuario la edita
   showToast("✓ Programación guardada para: " + target.title, 'success', 2000);
 }
 
@@ -4114,7 +4122,7 @@ function clearExamSchedule() {
   document.getElementById('examScheduledEnd').value = '';
   scheduleExamSync();
   renderExamsList();
-  updateExamEditorTitle();
+  updateExamEditorTitle({ skipConfig: true });
   showToast("✓ Fechas borradas de: " + target.title, 'success', 2000);
 }
 
