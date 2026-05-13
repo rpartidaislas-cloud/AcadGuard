@@ -3515,9 +3515,11 @@ function saveStudentSchedule() {
   s.scheduledStart = newStart;
   s.scheduledEnd = newEnd;
   setStudents(list);
+  // Sincronizar inmediatamente a Supabase para que persista entre sesiones
+  syncStudentToSupabase(s);
   closeSchedModal();
   if (newStart || newEnd) {
-    showToast("✅ Horario individual asignado a " + s.name);
+    showToast("✅ Horario individual guardado en la nube: " + s.name);
   } else {
     showToast("ℹ️ " + s.name + " usará el horario general del examen");
   }
@@ -3534,6 +3536,7 @@ function clearStudentSchedule() {
   s.scheduledStart = null;
   s.scheduledEnd = null;
   setStudents(list);
+  syncStudentToSupabase(s);
   closeSchedModal();
   showToast("🗑️ Horario individual eliminado. " + s.name + " usará el horario general.");
   renderStudents();
@@ -9322,11 +9325,13 @@ async function syncStudentToSupabase(student) {
     const exams = getExams();
     const examTitle = exams[student.examId]?.title || '';
     await _sb.from('alumnos').upsert({
-      nombre:        student.name,
-      codigo:        student.code,
-      examen_id:     student.examId || null,
-      examen_titulo: examTitle,
-      disabled:      student.disabled || false
+      nombre:          student.name,
+      codigo:          student.code,
+      examen_id:       student.examId || null,
+      examen_titulo:   examTitle,
+      disabled:        student.disabled || false,
+      scheduled_start: student.scheduledStart || null,
+      scheduled_end:   student.scheduledEnd   || null
     }, { onConflict: 'codigo' });
   } catch (e) {
     console.warn('Error syncing student:', e.message);
@@ -9341,21 +9346,26 @@ async function syncStudentsFromSupabase() {
     const { data, error } = await _sb.from('alumnos').select('*');
     if (error) throw error;
     const fromCloud = (data || []).map(r => ({
-      name: r.nombre,
-      code: r.codigo,
-      examId: r.examen_id || getActiveExamId(),
-      disabled: r.disabled || false,
-      disabledReason: r.disabled_reason || ''
+      name:            r.nombre,
+      code:            r.codigo,
+      examId:          r.examen_id || getActiveExamId(),
+      disabled:        r.disabled || false,
+      disabledReason:  r.disabled_reason || '',
+      scheduledStart:  r.scheduled_start || null,
+      scheduledEnd:    r.scheduled_end   || null
     }));
     const local = getStudents();
     const merged = [...local];
     let added = 0;
-    // Actualizar existentes y agregar nuevos
     for (const cs of fromCloud) {
       const idx = merged.findIndex(ls => ls.code === cs.code);
       if (idx >= 0) {
-        // Actualizar disabled desde Supabase (la nube es autoritativa)
-        merged[idx].disabled = cs.disabled;
+        // Actualizar desde Supabase (la nube es autoritativa para estos campos)
+        merged[idx].disabled        = cs.disabled;
+        merged[idx].disabledReason  = cs.disabledReason;
+        // Solo actualizar horario si Supabase lo tiene definido (evita borrar horario local recién asignado)
+        if (cs.scheduledStart !== null) merged[idx].scheduledStart = cs.scheduledStart;
+        if (cs.scheduledEnd   !== null) merged[idx].scheduledEnd   = cs.scheduledEnd;
       } else {
         merged.push(cs);
         added++;
