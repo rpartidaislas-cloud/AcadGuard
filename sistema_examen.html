@@ -2563,6 +2563,13 @@ function saveStore(key, val) {
    ========================================================================= */
 function getExams() {
   let exams = loadStore(STORE_KEYS.exams, null);
+  // Fallback: si IDB/cache está vacío, intentar leer el backup síncrono de localStorage
+  if (exams === null) {
+    try {
+      const backup = localStorage.getItem('ag_exams_backup');
+      if (backup) { exams = JSON.parse(backup); saveStore(STORE_KEYS.exams, exams); }
+    } catch(_) {}
+  }
   if (exams === null) {
     // Migración: si había un bank legacy, lo movemos al nuevo formato
     const legacy = loadStore(STORE_KEYS.bank, null);
@@ -2620,12 +2627,13 @@ function getExams() {
   return exams;
 }
 
-function setExams(exams) { saveStore(STORE_KEYS.exams, exams); }
+function setExams(exams) {
+  saveStore(STORE_KEYS.exams, exams);
+  // Backup síncrono en localStorage (IDB es async y puede perderse si la página cierra)
+  try { localStorage.setItem('ag_exams_backup', JSON.stringify(exams)); } catch(_) {}
+}
 
 function getActiveExamId() {
-  return loadStore(STORE_KEYS.activeExamId, "default");
-}
-function setActiveExamId(id) {
   saveStore(STORE_KEYS.activeExamId, id);
 }
 
@@ -9653,6 +9661,11 @@ async function loadExamsFromSupabase() {
       setExams(exams);
       console.info('✅', n, 'examen(es) actualizado(s) desde Supabase (más recientes)');
       if (typeof renderExamsList === 'function') renderExamsList();
+      // Si el examen que se está editando fue actualizado, refrescar los campos del editor
+      if (state.editingExamId && exams[state.editingExamId]) {
+        state.bank = exams[state.editingExamId];
+        if (typeof updateExamEditorTitle === 'function') updateExamEditorTitle();
+      }
     }
   } catch (e) { console.warn('loadExamsFromSupabase error:', e.message); }
   finally {
