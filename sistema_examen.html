@@ -2937,6 +2937,14 @@ function loginStudent() {
     // ── Validar INICIO ──
     const examStart = student.scheduledStart || exam.scheduledStart || null;
     const scheduleSource = student.scheduledStart ? 'individual' : 'examen';
+
+    // DEBUG TEMPORAL — muestra qué horario se está aplicando
+    console.info('[AcadGuard DEBUG] Alumno:', student.name,
+      '| scheduledStart (individual):', student.scheduledStart || '⚠ NO TIENE',
+      '| exam.scheduledStart (general):', exam.scheduledStart || '⚠ NO TIENE',
+      '| Fuente aplicada:', scheduleSource,
+      '| examStart usado:', examStart);
+
     if (examStart) {
       const start = new Date(examStart);
       if (Date.now() < start.getTime()) {
