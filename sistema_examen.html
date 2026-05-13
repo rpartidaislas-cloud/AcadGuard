@@ -1041,6 +1041,7 @@
     <div class="brand">🛡️ AcadGuard · Panel del Administrador</div>
     <div class="right">
       <span id="supabaseTopBadge" title="Configurar Supabase" style="font-size:11px;padding:3px 10px;border-radius:999px;background:rgba(255,255,255,.15);color:rgba(255,255,255,.8);cursor:pointer" onclick="openSupabaseModal()">⚫ Supabase</span>
+      <button onclick="syncAllFromSupabase()" id="syncAllBtn" title="Actualizar todo desde Supabase: exámenes, alumnos y resultados" style="font-size:12px;font-weight:600;padding:5px 12px;border-radius:6px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:white;cursor:pointer;transition:all .2s" onmouseover="this.style.background='rgba(255,255,255,.22)'" onmouseout="this.style.background='rgba(255,255,255,.12)'">🔄 Sincronizar</button>
       <button class="dark-toggle" onclick="toggleDarkMode()" id="darkToggleAdmin" title="Cambiar modo claro/oscuro">🌙</button>
       <span class="badge" id="adminUserBadge"></span>
       <button class="btn btn-ghost btn-sm" onclick="logout()" style="color:white;border-color:rgba(255,255,255,.5)">Salir</button>
@@ -4353,8 +4354,47 @@ function renameExamTitle(id, newTitle) {
 
 function saveConfig() {
   // saveConfig ahora solo persiste la config global (valores por defecto).
-  // La configuración de cada examen se guarda en saveExamCfg() dentro del editor de examen.
   saveStore(STORE_KEYS.config, state.config);
+}
+
+// ── Sincronización completa desde Supabase ────────────────────
+async function syncAllFromSupabase() {
+  if (!_sb) {
+    showToast('⚠ Configura Supabase primero — haz clic en el badge Supabase', 'warning', 3000);
+    openSupabaseModal();
+    return;
+  }
+  const btn = document.getElementById('syncAllBtn');
+  const origText = btn ? btn.textContent : '';
+  if (btn) { btn.textContent = '⏳ Sincronizando…'; btn.disabled = true; }
+  showToast('🔄 Sincronizando con Supabase…', 'success', 2000);
+
+  try {
+    const results = await Promise.allSettled([
+      loadExamsFromSupabase(),
+      syncStudentsFromSupabase(),
+      syncFromSupabase()
+    ]);
+
+    const labels = ['Exámenes', 'Alumnos', 'Resultados'];
+    const ok = results.filter(r => r.status === 'fulfilled').length;
+    const fail = results.filter(r => r.status === 'rejected');
+
+    // Refrescar todas las vistas
+    if (typeof renderExamsList === 'function') renderExamsList();
+    if (typeof renderStudents === 'function') renderStudents();
+    if (typeof renderResults === 'function') renderResults();
+    if (typeof updateAdminTabBadges === 'function') updateAdminTabBadges();
+
+    const msg = ok === 3
+      ? `✅ Todo sincronizado — Exámenes, Alumnos y Resultados actualizados desde Supabase`
+      : `⚠ ${ok}/3 módulos sincronizados${fail.length ? ' · Errores: ' + fail.map((_, i) => labels[i]).join(', ') : ''}`;
+    showToast(msg, ok === 3 ? 'success' : 'warning', 4000);
+  } catch (e) {
+    showToast('❌ Error al sincronizar: ' + e.message, 'error', 4000);
+  } finally {
+    if (btn) { btn.textContent = origText; btn.disabled = false; }
+  }
 }
 
 // ── MODO OSCURO / CLARO ──────────────────────────────────────
