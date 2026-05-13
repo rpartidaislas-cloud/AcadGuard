@@ -2643,6 +2643,10 @@ function setExams(exams) {
 }
 
 function getActiveExamId() {
+  return loadStore(STORE_KEYS.activeExamId, "default");
+}
+
+function setActiveExamId(id) {
   saveStore(STORE_KEYS.activeExamId, id);
 }
 
