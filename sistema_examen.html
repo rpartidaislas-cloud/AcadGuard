@@ -3225,8 +3225,25 @@ function genCode() {
   return s;
 }
 
-function getStudents() { return loadStore(STORE_KEYS.students, []); }
-function setStudents(list) { saveStore(STORE_KEYS.students, list); renderStudents(); }
+function getStudents() {
+  const list = loadStore(STORE_KEYS.students, null);
+  if (list !== null) return list;
+  // Fallback: backup síncrono en localStorage
+  try {
+    const backup = localStorage.getItem('ag_students_backup');
+    if (backup) {
+      const parsed = JSON.parse(backup);
+      saveStore(STORE_KEYS.students, parsed);
+      return parsed;
+    }
+  } catch(_) {}
+  return [];
+}
+function setStudents(list) {
+  saveStore(STORE_KEYS.students, list);
+  try { localStorage.setItem('ag_students_backup', JSON.stringify(list)); } catch(_) {}
+  renderStudents();
+}
 
 function addStudent() {
   const name = document.getElementById('newStudentName').value.trim();
@@ -9321,20 +9338,34 @@ async function exportWithSupabase() {
 // Sube un alumno a Supabase (upsert: si ya existe lo actualiza)
 async function syncStudentToSupabase(student) {
   if (!_sb) return;
+  const exams = getExams();
+  const examTitle = exams[student.examId]?.title || '';
+  const baseRow = {
+    nombre:        student.name,
+    codigo:        student.code,
+    examen_id:     student.examId || null,
+    examen_titulo: examTitle,
+    disabled:      student.disabled || false
+  };
   try {
-    const exams = getExams();
-    const examTitle = exams[student.examId]?.title || '';
+    // Intentar con columnas de horario individual
     await _sb.from('alumnos').upsert({
-      nombre:          student.name,
-      codigo:          student.code,
-      examen_id:       student.examId || null,
-      examen_titulo:   examTitle,
-      disabled:        student.disabled || false,
+      ...baseRow,
       scheduled_start: student.scheduledStart || null,
       scheduled_end:   student.scheduledEnd   || null
     }, { onConflict: 'codigo' });
   } catch (e) {
-    console.warn('Error syncing student:', e.message);
+    if (e.message && e.message.includes('scheduled')) {
+      // Las columnas aún no existen — usar fallback sin horario
+      console.warn('Columnas scheduled_start/end no existen. Ejecuta el SQL en Supabase. Guardando sin horario…');
+      try {
+        await _sb.from('alumnos').upsert(baseRow, { onConflict: 'codigo' });
+      } catch (e2) {
+        console.warn('Error sync alumno (fallback):', e2.message);
+      }
+    } else {
+      console.warn('Error syncing student:', e.message);
+    }
   }
 }
 
