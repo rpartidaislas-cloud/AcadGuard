@@ -10388,38 +10388,61 @@ function renderProcTextAsTable(procText) {
   if (!procText) return "";
   var lines = procText.split('\n');
   var rows = [];
+  var header = "";
   lines.forEach(function(line) {
-    if (!line.trim() || line.startsWith('[') || line.startsWith('---') || line.startsWith('Celda')) return;
+    var t = line.trim();
+    if (!t) return;
+    if (t.startsWith('[')) { header = t.replace(/[\[\]]/g,''); return; }
+    if (t.startsWith('---') || t.startsWith('Celda')) return;
     var parts = line.split('|').map(function(p){ return p.trim(); });
     if (parts.length >= 2 && parts[0]) rows.push(parts);
   });
+
   if (!rows.length) {
-    return "<pre style='background:#f8fafc;border:1px solid #e5e7eb;border-radius:6px;padding:8px;font-size:.78em;overflow-x:auto;white-space:pre-wrap'>"+escTA(procText)+"</pre>";
+    return "<div style='background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;overflow:auto;max-height:300px;padding:10px'>"
+      +"<pre style='font-size:.82em;white-space:pre;margin:0;font-family:monospace'>"+escTA(procText)+"</pre></div>";
   }
-  var uid = 'sht_'+(Math.random().toString(36).slice(2,7));
-  var html = "<div style='overflow-x:auto;border:1px solid #e5e7eb;border-radius:6px;margin:6px 0'>"
-    +"<table style='border-collapse:collapse;font-size:.85em;width:100%;min-width:400px'>"
-    +"<thead><tr>"
-    +"<th style='background:#1e3a5f;color:white;padding:6px 10px;border:1px solid #374151;min-width:50px'>Celda</th>"
-    +"<th style='background:#1e3a5f;color:white;padding:6px 10px;border:1px solid #374151;min-width:200px'>Fórmula / valor</th>"
-    +"<th style='background:#1e3a5f;color:white;padding:6px 10px;border:1px solid #374151;min-width:120px'>Resultado</th>"
+
+  var uid = 'tbl_'+(Math.random().toString(36).slice(2,7));
+
+  var tableHTML = "<div id='"+uid+"' style='"
+    +"overflow:auto;border:1px solid #3b82f6;border-radius:8px;"
+    +"max-height:400px;width:100%;box-sizing:border-box;background:white'>"
+    +"<table style='border-collapse:collapse;font-size:.88em;min-width:600px;width:100%'>"
+    +"<thead><tr style='position:sticky;top:0;z-index:2'>"
+    +"<th style='background:#1e3a5f;color:white;padding:7px 12px;border:1px solid #374151;min-width:55px;text-align:center;white-space:nowrap'>Celda</th>"
+    +"<th style='background:#1e3a5f;color:white;padding:7px 14px;border:1px solid #374151;min-width:220px;text-align:left'>Fórmula / Valor</th>"
+    +"<th style='background:#1e3a5f;color:white;padding:7px 14px;border:1px solid #374151;min-width:160px;text-align:left'>Resultado</th>"
     +"</tr></thead><tbody>";
+
   rows.forEach(function(p, i) {
-    var celda = p[0]||'';
-    var formula = p[1]||'';
-    var resultado = p[2]||'';
+    var celda    = p[0] || '';
+    var formula  = p[1] || '';
+    var resultado = p[2] || '';
     var isFormula = formula.startsWith('=');
-    var bg = i%2===0?'white':'#f9fafb';
-    html += "<tr style='background:"+bg+"'>"
-      +"<td style='padding:5px 10px;border:1px solid #e5e7eb;font-weight:700;color:#374151;text-align:center'>"+escTA(celda)+"</td>"
-      +"<td style='padding:5px 10px;border:1px solid #e5e7eb;font-family:monospace;color:"+(isFormula?'#92400e':'#111827')+";background:"+(isFormula?'#fffbeb':bg)+"'>"+escTA(formula)+"</td>"
-      +"<td style='padding:5px 10px;border:1px solid #e5e7eb;font-weight:600;color:#1e3a5f'>"+escTA(resultado)+"</td>"
+    var isHeader  = !celda.match(/^[A-Z]+[0-9]+$/);
+    var bg = isHeader ? '#f0f4ff' : (i%2===0 ? 'white' : '#f9fafb');
+    var cellStyle = 'padding:6px 12px;border:1px solid #e5e7eb;vertical-align:middle';
+    tableHTML += "<tr style='background:"+bg+"'>"
+      +"<td style='"+cellStyle+";font-weight:700;color:#374151;text-align:center;font-family:monospace'>"+escTA(celda)+"</td>"
+      +"<td style='"+cellStyle+";font-family:monospace;color:"+(isFormula?'#92400e':(isHeader?'#1e3a5f':'#111827'))
+        +";font-weight:"+(isFormula||isHeader?'700':'400')
+        +";background:"+(isFormula?'#fffbeb':bg)+"'>"+escTA(formula)+"</td>"
+      +"<td style='"+cellStyle+";font-weight:"+(resultado&&resultado!=='rwe'?'600':'400')
+        +";color:"+(resultado&&resultado!=='rwe'?'#1e3a5f':'#9ca3af')+"'>"+escTA(resultado)+"</td>"
       +"</tr>";
   });
-  html += "</tbody></table></div>"
-    +"<details style='margin-top:4px'><summary style='font-size:.75em;color:#6b7280;cursor:pointer'>Ver texto original</summary>"
-    +"<pre style='background:#f8fafc;border:1px solid #e5e7eb;border-radius:6px;padding:8px;font-size:.72em;overflow-x:auto;white-space:pre;margin-top:4px'>"+escTA(procText)+"</pre></details>";
-  return html;
+
+  tableHTML += "</tbody></table></div>";
+
+  var metaBar = "";
+  if (header) metaBar = "<div style='font-size:.72em;color:#6b7280;margin-bottom:4px'>⏱ "+escTA(header)+" &nbsp;·&nbsp; "+rows.length+" filas</div>";
+
+  return "<div style='margin:8px 0'>"
+    + metaBar
+    + tableHTML
+    +"<div style='font-size:.72em;color:#6b7280;margin-top:3px;text-align:right'>⬅ Desliza para ver más &nbsp;|&nbsp; ↕ Scroll vertical</div>"
+    +"</div>";
 }
 
 function gSB(){try{return window.supabase.createClient(SU,SK,{auth:{persistSession:false}});}catch(e){return null;}}
@@ -10813,7 +10836,11 @@ window.agOpen=function(idx){
           +"<div class=\"ag-qh\"><span class=\"ag-qn\">P"+(qi+1)+" &bull; ABIERTA</span><span class=\"ag-qs\" id=\"agS-"+q.id+"\">"+earned+"/"+pts+" pts</span></div>"
           +"<p class=\"ag-qt\">"+q.text+"</p>"
           +"<div style=\"font-size:.78em;font-weight:600;color:#6b7280;margin-bottom:3px\">Respuesta del alumno:</div>"
-          +"<div class=\"ag-sa\">"+(ans||"<em style=\"color:#9ca3af\">Sin respuesta</em>")+"</div>"
+          +(ans
+            ? (ans.indexOf('[Hoja de cálculo')>=0||ans.indexOf('[Hoja de c')>=0
+                ? renderProcTextAsTable(ans)
+                : "<div class=\"ag-sa\">"+ans+"</div>")
+            : "<div class=\"ag-sa\"><em style=\"color:#9ca3af\">Sin respuesta</em></div>")
           +rubric+contest
           +"<div class=\"ag-row\"><label>Calificaci\u00F3n:</label>"
           +"<input class=\"ag-si\" type=\"number\" min=\"0\" max=\""+pts+"\" value=\""+earned+"\" data-qid=\""+q.id+"\" data-max=\""+pts+"\" oninput=\"agUpd(this)\">"
