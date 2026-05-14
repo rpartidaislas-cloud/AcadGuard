@@ -1514,11 +1514,12 @@ CREATE POLICY "allow_all_examenes" ON examenes FOR ALL USING (true) WITH CHECK (
         <span>📊 Hoja de cálculo</span>
         <span style="font-size:12px;font-weight:400;opacity:.85" id="sheetCtx"></span>
       </div>
-      <div>
-        <button id="sheetApplyBtn" onclick="sheetApplyToQuestion()" style="background:white;color:#1e7e34;font-weight:700;margin-right:6px">📌 Aplicar a la respuesta</button>
-        <select id="sheetSelectQ" onchange="sheetSwitchQuestion(this.value)" title="Cambiar de pregunta sin perder el trabajo" style="margin-right:6px;padding:6px 8px;border-radius:4px;border:none;font-weight:600;color:#1f4e79"></select>
-        <button onclick="sheetClear()" style="margin-right:6px">🗑️ Limpiar</button>
-        <button onclick="closeSheet()">Cerrar ✕</button>
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+        <span id="sheetSaveIndicator" style="font-size:11px;color:rgba(255,255,255,.6);min-width:80px;text-align:right"></span>
+        <button id="sheetApplyBtn" onclick="sheetApplyToQuestion()" style="background:#f0c040;color:#1a1d2e;font-weight:800;font-size:13px;padding:8px 16px;border:none;border-radius:8px;margin-right:4px">⭐ Aplicar a la respuesta</button>
+        <select id="sheetSelectQ" onchange="sheetSwitchQuestion(this.value)" title="Cambiar de pregunta" style="padding:6px 8px;border-radius:4px;border:none;font-weight:600;color:#1f4e79"></select>
+        <button onclick="sheetClear()" style="background:rgba(255,255,255,.12);color:white;border:1px solid rgba(255,255,255,.3);padding:6px 10px;border-radius:6px" title="Borrar todo el contenido">🗑️</button>
+        <button onclick="closeSheetSafe()" style="background:rgba(255,255,255,.12);color:white;border:1px solid rgba(255,255,255,.3);padding:6px 12px;border-radius:6px;font-weight:700" title="Cerrar hoja (tus datos quedan guardados)">✕ Cerrar</button>
       </div>
     </div>
     <div class="sheet-toolbar">
@@ -1583,8 +1584,7 @@ CREATE POLICY "allow_all_examenes" ON examenes FOR ALL USING (true) WITH CHECK (
       <div id="sheetFillHandle" class="sheet-fill-handle" onmousedown="sheetFillHandleDown(event)" title="Arrastra para copiar/extender el contenido"></div>
     </div>
     <div class="sheet-help">
-      <b>📌 Fórmulas vivas:</b> las celdas con fórmula muestran un <span style="display:inline-block;width:0;height:0;border-style:solid;border-width:6px 6px 0 0;border-color:#1e7e34 transparent transparent transparent"></span> verde en la esquina.
-      <b>Navegar:</b> flechas ↑↓←→ o Tab · <b>Editar:</b> doble clic o F2 · <b>Copiar/Pegar:</b> Ctrl+C / Ctrl+V · <b>Deshacer/Rehacer:</b> Ctrl+Z / Ctrl+Y
+      💡 <b>Cómo usar:</b> Haz clic en una celda y empieza a escribir · <b>Enter</b> confirma y baja · <b>Tab</b> confirma y va a la derecha · <b>Doble clic</b> o <b>F2</b> para editar una celda existente · <b>Ctrl+Z</b> deshace · Tus datos se guardan automáticamente al escribir
     </div>
   </div>
 </div>
@@ -2784,6 +2784,9 @@ function renameExam(id, newTitle) {
 async function init() {
   const loader = document.getElementById('appLoader');
   if (loader) loader.classList.remove('hidden');
+  // Asegurar que el popup del Excel esté oculto al iniciar
+  const _qp = document.getElementById('sheetQuestionPopup');
+  if (_qp) _qp.classList.add('hidden');
 
   const allKeys = Object.values(STORE_KEYS);
   await DB.init(allKeys);
@@ -3278,6 +3281,8 @@ function logout() {
   document.getElementById('sheetFab').classList.add('hidden');
   document.getElementById('sheetModal').classList.add('hidden');
   document.body.classList.remove('sheet-open');
+  const _qp = document.getElementById('sheetQuestionPopup');
+  if (_qp) _qp.classList.add('hidden');
   document.getElementById('resultModal').classList.add('hidden');
   removeAntiCheat();
 }
@@ -6526,6 +6531,7 @@ function sheetSave() {
   const all = loadStore(SHEET.storeKey(), {});
   all[SHEET.activeQid] = { cells: SHEET.cells, selected: SHEET.selected };
   saveStore(SHEET.storeKey(), all);
+  sheetShowSaved();
 }
 
 function sheetCountCells(qid) {
@@ -6653,8 +6659,10 @@ function sheetGlobalKeyHandler(e) {
   if (k === 'ArrowLeft') { e.preventDefault(); sheetMove(-1, 0); return; }
   if (k === 'ArrowRight'){ e.preventDefault(); sheetMove(1, 0); return; }
   if (k === 'Tab')       { e.preventDefault(); sheetMove(e.shiftKey ? -1 : 1, 0); return; }
-  // Enter / F2: editar
-  if (k === 'Enter' || k === 'F2') { e.preventDefault(); sheetEditCell(SHEET.selected); return; }
+  // Enter: si no está editando, mover hacia abajo (como Excel real)
+  // F2: abrir modo edición
+  if (k === 'Enter') { e.preventDefault(); sheetMove(0, 1); return; }
+  if (k === 'F2')    { e.preventDefault(); sheetEditCell(SHEET.selected); return; }
   // Delete / Backspace: borrar selección o celda activa
   if (k === 'Delete' || k === 'Backspace') {
     e.preventDefault();
@@ -6840,31 +6848,31 @@ function makeRangeStr(start, end) {
 }
 
 function sheetCellMouseDown(addr, e) {
-  // Click derecho o con modificador ctrl: ignorar (deja que pase contextmenu)
   if (e.button === 2) return;
 
   const editingAddr = findEditingAddr();
   if (editingAddr && editingAddr !== addr && isEditingFormula(editingAddr)) {
-    // Modo: range-picker durante edición de fórmula
     e.preventDefault();
     const div = document.getElementById('cell-' + editingAddr);
     SHEET.dragState = {
-      mode: 'range-pick',
-      start: addr,
-      current: addr,
-      editingCell: editingAddr,
-      textBefore: (div.textContent || '')
+      mode: 'range-pick', start: addr, current: addr,
+      editingCell: editingAddr, textBefore: (div.textContent || '')
     };
     div.textContent = SHEET.dragState.textBefore + addr;
     document.getElementById('sheetFormulaBar').value = div.textContent;
     return;
   }
 
-  if (editingAddr) return; // Si está editando ESTA celda, no hacer nada raro
-  // Modo: selección normal o multi-select arrastrado
+  // Si había una celda en edición, confirmarla antes de cambiar
+  if (editingAddr && editingAddr !== addr) {
+    sheetCommitEditing(editingAddr);
+  }
+
   SHEET.dragState = { mode: 'select', start: addr, current: addr };
   SHEET.range = null;
   sheetSelect(addr);
+  // Un clic simple selecciona la celda. El alumno puede empezar a escribir de inmediato.
+  // No se requiere doble clic para editar.
 }
 
 function sheetCellMouseEnter(addr) {
@@ -7479,6 +7487,26 @@ function closeSheet() {
   document.body.classList.remove('sheet-open');
   const popup = document.getElementById('sheetQuestionPopup');
   if (popup) popup.classList.add('hidden');
+}
+
+function closeSheetSafe() {
+  // Si hay datos, confirmar antes de cerrar
+  const cellCount = Object.keys(SHEET.cells).filter(k => SHEET.cells[k] && SHEET.cells[k].raw !== '' && SHEET.cells[k].raw != null).length;
+  if (cellCount > 0) {
+    const ok = confirm('¿Cerrar la hoja de cálculo?\n\nTus ' + cellCount + ' celda(s) están guardadas automáticamente. Puedes volver a abrirla cuando quieras y tu trabajo estará intacto.');
+    if (!ok) return;
+  }
+  closeSheet();
+}
+
+// Mostrar indicador de guardado
+function sheetShowSaved() {
+  const el = document.getElementById('sheetSaveIndicator');
+  if (!el) return;
+  el.textContent = '✓ Guardado';
+  el.style.color = 'rgba(100,255,150,.9)';
+  clearTimeout(el._t);
+  el._t = setTimeout(() => { el.textContent = ''; }, 2000);
 }
 
 function sheetTogglePopup() {
