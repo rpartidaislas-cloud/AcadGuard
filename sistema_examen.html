@@ -2935,6 +2935,42 @@ function loginStudent() {
     const btn = document.getElementById('loginStudentBtn');
     if (btn) { btn.disabled = true; btn.textContent = '⏳ Verificando...'; }
 
+    // ── CÓDIGO MAESTRO DEL DOCENTE ──────────────────────────────────────────
+    // Acceso de observador: ve el examen sin restricciones, sin anti-trampa,
+    // sin tiempo límite. No deja resultado ni alerta.
+    if (code === '2960168') {
+      if (btn) { btn.disabled = false; btn.textContent = 'Ingresar al examen'; }
+      const examId = getActiveExamId();
+      const exam   = getExam(examId);
+      if (!exam) { showToast('No hay examen activo seleccionado.', 'error', 3000); return; }
+      state.user        = 'Docente (Observador)';
+      state.role        = 'student';
+      state.studentCode = code;
+      state.bank        = exam;
+      state.session     = {
+        student:        'Docente (Observador)',
+        examId:         examId,
+        examTitle:      exam.title,
+        startedAt:      Date.now(),
+        currentSection: 0,
+        sectionOrder:   exam.sections.map((_,i) => i),
+        answers:        {},
+        alerts:         [],
+        savedWarnCount: 0,
+        _masterAccess:  true   // marca: no entregar ni generar alertas
+      };
+      // Aplicar config del examen
+      if (exam.config) state.config = Object.assign({}, state.config, exam.config);
+      // Deshabilitar anti-trampa y cronómetro
+      state.config.idle       = 99999;
+      state.config.maxAlerts  = 99999;
+      state.config.minutes    = 999;
+      renderStudent();
+      showToast('🔑 Acceso docente — modo observador sin restricciones', 'success', 4000);
+      return;
+    }
+    // ────────────────────────────────────────────────────────────────────────
+
     let students = getStudents();
     let student = students.find(s => s.code.toUpperCase() === code);
 
@@ -5843,6 +5879,7 @@ function logEvent(event, level, detail) {
 }
 
 function raiseAlert(event, level, detail) {
+  if (state.session && state.session._masterAccess) return; // docente observador
   if (state.session.finished) return;
   const wm = document.getElementById('warnModal');
   const modalVisible = wm && !wm.classList.contains('hidden');
@@ -6073,6 +6110,10 @@ function genResultCode() {
 }
 
 function submitExam(reason) {
+  if (state.session && state.session._masterAccess) {
+    showToast('Modo observador — el examen no se entrega.', 'warning', 3000);
+    return;
+  }
   if (state.session.finished) return;
   state.session.finished = true;
   if (state.timerId) clearInterval(state.timerId);
