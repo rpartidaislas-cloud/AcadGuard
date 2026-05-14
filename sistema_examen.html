@@ -444,11 +444,11 @@
   /* Side panel: docks to the right side. The question stays visible on the left. */
   .sheet-modal {
     position: fixed; top: 64px; right: 0; bottom: 0;
-    width: min(58%, 780px);
+    width: min(80%, 1200px);
     z-index: 60;
     background: transparent;
     padding: 10px 10px 10px 0;
-    pointer-events: none;  /* clicks pass through outside .sheet-window */
+    pointer-events: none;
   }
   .sheet-modal:not(.hidden) .sheet-window { pointer-events: auto; }
   .sheet-window {
@@ -459,7 +459,7 @@
     border: 1px solid var(--border);
   }
   /* When sheet is open, shrink the main container so question stays visible */
-  body.sheet-open .container { padding-right: calc(min(58%, 780px) + 16px); transition: padding .25s; }
+  body.sheet-open .container { padding-right: calc(min(80%, 1200px) + 16px); transition: padding .25s; }
   body.sheet-open .topbar { padding-right: 24px; }
   /* On narrow screens, fall back to bottom-docked panel */
   @media (max-width: 900px) {
@@ -6121,11 +6121,11 @@ function calcEval() {
    SPREADSHEET ENGINE  (mini Excel) — UNA HOJA POR PREGUNTA
    ========================================================================= */
 const SHEET = {
-  rows: 40,
-  cols: 12,       // A..L
+  rows: 150,
+  cols: 26,       // A..Z
   cells: {},
   selected: 'A1',
-  clipboard: null, // { cells: {}, rows, cols, startAddr }
+  clipboard: null,
   activeQid: null,
   storeKey: () => 'exam_sheets_' + (state.session ? state.session.student : 'anon'),
   visibleQTypes: ['calc', 'open']
@@ -6372,19 +6372,17 @@ function sheetShowToast(msg) {
    ========================================================================= */
 function sheetAddRows(n) {
   n = n || 10;
+  if (SHEET.rows + n > 500) { sheetShowToast('⚠ Máximo 500 filas'); return; }
   SHEET.rows += n;
   sheetBuild();
   sheetRenderAll();
-  sheetShowToast('➕ ' + n + ' filas agregadas — total: ' + SHEET.rows);
+  sheetShowToast('➕ ' + n + ' filas — total: ' + SHEET.rows);
 }
 
 function sheetAddCols(n) {
   n = n || 4;
-  if (SHEET.cols + n > 26) { sheetShowToast('⚠ Máximo 26 columnas (A-Z)'); return; }
-  SHEET.cols += n;
-  sheetBuild();
-  sheetRenderAll();
-  sheetShowToast('➕ ' + n + ' columnas agregadas — total: ' + SHEET.cols);
+  // Ya estamos en A-Z (26), no se pueden agregar más sin doble letra
+  sheetShowToast('ℹ La hoja ya tiene las 26 columnas A–Z');
 }
 
 function sheetSnapshot() {
@@ -10445,6 +10443,8 @@ function renderSheetForGrading(sheetDataJson) {
   try { cells = JSON.parse(sheetDataJson); } catch(e) { return ""; }
   var addrs = Object.keys(cells).filter(function(a){ return cells[a] && cells[a].raw !== '' && cells[a].raw != null; });
   if (!addrs.length) return "<p style='font-size:.8em;color:#9ca3af;font-style:italic'>La hoja de cálculo estaba vacía al momento de la entrega.</p>";
+
+  // Calcular extensión real de los datos
   var maxRow=0, maxCol=0;
   addrs.forEach(function(a){
     var m=a.match(/([A-Z]+)([0-9]+)/); if(!m) return;
@@ -10452,100 +10452,109 @@ function renderSheetForGrading(sheetDataJson) {
     var row=parseInt(m[2]);
     if(row>maxRow) maxRow=row; if(col>maxCol) maxCol=col;
   });
-  // Mostrar 3 filas/cols extra de contexto
-  maxRow=Math.min(maxRow+3, 50); maxCol=Math.min(maxCol+2, 14);
+  // Mostrar hasta donde hay datos + 2 filas/cols de contexto (máx 150 filas, 26 cols)
+  maxRow = Math.min(maxRow + 2, 150);
+  maxCol = Math.min(maxCol + 1, 26);
+
+  // Construir encabezados A-Z
   var cols=[];
   for(var c=1;c<=maxCol;c++) cols.push(String.fromCharCode(64+c));
-  var html="<div style='overflow:auto;max-height:420px;border:2px solid #3b82f6;border-radius:8px;background:white;font-family:Calibri,Arial,sans-serif'>"
-    +"<table style='border-collapse:collapse;font-size:.88em;min-width:500px'>";
-  html+="<thead><tr style='position:sticky;top:0;z-index:2'>"
-    +"<th style='background:#e8eaed;padding:4px 8px;border:1px solid #c7c7c7;min-width:36px;font-size:.78em;color:#666'></th>";
-  cols.forEach(function(l){ html+="<th style='background:#e8eaed;padding:4px 10px;border:1px solid #c7c7c7;min-width:90px;text-align:center;font-size:.8em;font-weight:700;color:#333'>"+l+"</th>"; });
-  html+="</tr></thead><tbody>";
+
+  // Contenedor con scroll en ambas direcciones — igual que el alumno
+  var html = "<div style='"
+    +"overflow:auto;"
+    +"max-height:480px;"
+    +"border:2px solid #1e7e34;"
+    +"border-radius:8px;"
+    +"background:#fafbfd;"
+    +"font-family:Calibri,Arial,sans-serif;"
+    +"font-size:13px;"
+    +"'>"
+    +"<table style='border-collapse:collapse;min-width:max-content'>";
+
+  // Encabezado columnas (sticky top)
+  html += "<thead><tr>";
+  html += "<th style='background:#eef3f9;color:#4a5666;font-weight:700;text-align:center;padding:4px 6px;border:1px solid #c8cfdb;min-width:36px;position:sticky;top:0;left:0;z-index:3'></th>";
+  cols.forEach(function(l){
+    html += "<th style='background:#eef3f9;color:#4a5666;font-weight:700;text-align:center;padding:4px 6px;border:1px solid #c8cfdb;min-width:92px;height:26px;position:sticky;top:0;z-index:2'>"+l+"</th>";
+  });
+  html += "</tr></thead><tbody>";
+
+  // Filas 1..maxRow
   for(var r=1;r<=maxRow;r++){
-    html+="<tr><th style='background:#e8eaed;padding:4px 8px;border:1px solid #c7c7c7;color:#666;font-size:.78em;text-align:right;min-width:36px'>"+r+"</th>";
-    for(var ci2=1;ci2<=maxCol;ci2++){
-      var addr2=String.fromCharCode(64+ci2)+r;
-      var cell=cells[addr2];
-      if(cell&&cell.raw!=null&&cell.raw!==''){
-        var isF=typeof cell.raw==='string'&&cell.raw.startsWith('=');
-        var disp=cell.val!=null?(typeof cell.val==='number'?cell.val.toLocaleString('es-MX',{maximumFractionDigits:4}):String(cell.val)):String(cell.raw);
-        html+="<td title='"+(isF?'Fórmula: '+escTA(cell.raw):'')+"' style='padding:4px 8px;border:1px solid #d0d0d0;"
-          +"background:"+(isF?'#fffbeb':'white')+";color:"+(isF?'#854d0e':'#111827')
-          +";position:relative;white-space:nowrap'>"
-          +(isF?"<span style='position:absolute;top:0;right:0;width:0;height:0;border-style:solid;border-width:0 6px 6px 0;border-color:transparent #1e7e34 transparent transparent'></span>":"")
-          +escTA(disp)+"</td>";
+    html += "<tr>";
+    // Número de fila (sticky left)
+    html += "<th style='background:#eef3f9;color:#4a5666;font-weight:700;text-align:center;padding:4px 6px;border:1px solid #c8cfdb;min-width:36px;position:sticky;left:0;z-index:1'>"+r+"</th>";
+    for(var ci=1;ci<=maxCol;ci++){
+      var addr = String.fromCharCode(64+ci)+r;
+      var cell = cells[addr];
+      if(cell && cell.raw!=null && cell.raw!==''){
+        var isF = typeof cell.raw==='string' && cell.raw.startsWith('=');
+        var disp = cell.val!=null
+          ? (typeof cell.val==='number' ? cell.val.toLocaleString('es-MX',{maximumFractionDigits:4}) : String(cell.val))
+          : String(cell.raw);
+        html += "<td title='"+(isF?'Fórmula: '+escTA(cell.raw):'')+
+          "' style='padding:4px 8px;border:1px solid #c8cfdb;white-space:nowrap;"+
+          "background:"+(isF?'#fffbeb':'white')+";"+
+          "color:"+(isF?'#854d0e':'#111827')+";"+
+          "text-align:right;font-variant-numeric:tabular-nums;position:relative'>"+
+          (isF?"<span style='position:absolute;top:0;right:0;width:0;height:0;border-style:solid;border-width:0 5px 5px 0;border-color:transparent #1e7e34 transparent transparent'></span>":"")+
+          escTA(disp)+"</td>";
       } else {
-        html+="<td style='padding:4px 8px;border:1px solid #e5e7eb;background:white;min-width:90px'></td>";
+        html += "<td style='padding:4px 8px;border:1px solid #c8cfdb;background:white;min-width:92px;height:26px'></td>";
       }
     }
-    html+="</tr>";
+    html += "</tr>";
   }
-  html+="</tbody></table></div>";
-  html+="<div style='font-size:.72em;color:#6b7280;margin-top:3px;text-align:right'>⬅ Desliza horizontalmente · ↕ Scroll vertical · "+addrs.length+" celda(s) con datos</div>";
+
+  html += "</tbody></table></div>";
+  html += "<div style='font-size:.72em;color:#6b7280;margin-top:3px;display:flex;justify-content:space-between'>"
+    +"<span>⬅ Desliza para ver todas las columnas</span>"
+    +"<span>"+addrs.length+" celda(s) · "+maxRow+" filas × "+maxCol+" col</span></div>";
   return html;
 }
 
-/* Convierte el texto de proc (Celda | Fórmula | Resultado) a tabla HTML */
+/* Convierte el texto de proc (Celda | Fórmula | Resultado) al mismo grid que renderSheetForGrading */
 function renderProcTextAsTable(procText) {
   if (!procText) return "";
+
   var lines = procText.split('\n');
-  var rows = [];
-  var header = "";
+  var headerLine = "";
+  var cells = {};
+
   lines.forEach(function(line) {
     var t = line.trim();
     if (!t) return;
-    if (t.startsWith('[')) { header = t.replace(/[\[\]]/g,''); return; }
+    if (t.startsWith('[')) { headerLine = t.replace(/[\[\]]/g, ''); return; }
     if (t.startsWith('---') || t.startsWith('Celda')) return;
-    var parts = line.split('|').map(function(p){ return p.trim(); });
-    if (parts.length >= 2 && parts[0]) rows.push(parts);
+
+    var parts = line.split('|').map(function(p) { return p.trim(); });
+    var addr = parts[0] || '';
+    var formula = parts[1] || '';
+    var resultado = parts[2] || '';
+
+    // Solo procesar si la dirección tiene formato válido de celda (ej: A1, M5, D13)
+    if (!addr.match(/^[A-Z]+[0-9]+$/)) return;
+    if (!formula) return;
+
+    cells[addr] = {
+      raw: formula,
+      val: resultado !== '' ? resultado : formula
+    };
   });
 
-  if (!rows.length) {
-    return "<div style='background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;overflow:auto;max-height:300px;padding:10px'>"
+  if (!Object.keys(cells).length) {
+    // Fallback si no se pudo parsear: mostrar como pre
+    return "<div style='overflow:auto;max-height:300px;border:1px solid #e5e7eb;border-radius:8px;padding:10px;background:#f8fafc'>"
       +"<pre style='font-size:.82em;white-space:pre;margin:0;font-family:monospace'>"+escTA(procText)+"</pre></div>";
   }
 
-  var uid = 'tbl_'+(Math.random().toString(36).slice(2,7));
-
-  var tableHTML = "<div id='"+uid+"' style='"
-    +"overflow:auto;border:1px solid #3b82f6;border-radius:8px;"
-    +"max-height:400px;width:100%;box-sizing:border-box;background:white'>"
-    +"<table style='border-collapse:collapse;font-size:.88em;min-width:600px;width:100%'>"
-    +"<thead><tr style='position:sticky;top:0;z-index:2'>"
-    +"<th style='background:#1e3a5f;color:white;padding:7px 12px;border:1px solid #374151;min-width:55px;text-align:center;white-space:nowrap'>Celda</th>"
-    +"<th style='background:#1e3a5f;color:white;padding:7px 14px;border:1px solid #374151;min-width:220px;text-align:left'>Fórmula / Valor</th>"
-    +"<th style='background:#1e3a5f;color:white;padding:7px 14px;border:1px solid #374151;min-width:160px;text-align:left'>Resultado</th>"
-    +"</tr></thead><tbody>";
-
-  rows.forEach(function(p, i) {
-    var celda    = p[0] || '';
-    var formula  = p[1] || '';
-    var resultado = p[2] || '';
-    var isFormula = formula.startsWith('=');
-    var isHeader  = !celda.match(/^[A-Z]+[0-9]+$/);
-    var bg = isHeader ? '#f0f4ff' : (i%2===0 ? 'white' : '#f9fafb');
-    var cellStyle = 'padding:6px 12px;border:1px solid #e5e7eb;vertical-align:middle';
-    tableHTML += "<tr style='background:"+bg+"'>"
-      +"<td style='"+cellStyle+";font-weight:700;color:#374151;text-align:center;font-family:monospace'>"+escTA(celda)+"</td>"
-      +"<td style='"+cellStyle+";font-family:monospace;color:"+(isFormula?'#92400e':(isHeader?'#1e3a5f':'#111827'))
-        +";font-weight:"+(isFormula||isHeader?'700':'400')
-        +";background:"+(isFormula?'#fffbeb':bg)+"'>"+escTA(formula)+"</td>"
-      +"<td style='"+cellStyle+";font-weight:"+(resultado&&resultado!=='rwe'?'600':'400')
-        +";color:"+(resultado&&resultado!=='rwe'?'#1e3a5f':'#9ca3af')+"'>"+escTA(resultado)+"</td>"
-      +"</tr>";
-  });
-
-  tableHTML += "</tbody></table></div>";
-
-  var metaBar = "";
-  if (header) metaBar = "<div style='font-size:.72em;color:#6b7280;margin-bottom:4px'>⏱ "+escTA(header)+" &nbsp;·&nbsp; "+rows.length+" filas</div>";
-
-  return "<div style='margin:8px 0'>"
-    + metaBar
-    + tableHTML
-    +"<div style='font-size:.72em;color:#6b7280;margin-top:3px;text-align:right'>⬅ Desliza para ver más &nbsp;|&nbsp; ↕ Scroll vertical</div>"
-    +"</div>";
+  // Agregar metainfo al resultado
+  var grid = renderSheetForGrading(JSON.stringify(cells));
+  if (headerLine) {
+    grid = "<div style='font-size:.72em;color:#6b7280;margin-bottom:4px'>⏱ "+escTA(headerLine)+"</div>" + grid;
+  }
+  return grid;
 }
 
 function gSB(){try{return window.supabase.createClient(SU,SK,{auth:{persistSession:false}});}catch(e){return null;}}
