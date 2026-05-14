@@ -443,28 +443,55 @@
   #sheetFab .ic { font-size: 20px; }
   /* Side panel: docks to the right side. The question stays visible on the left. */
   .sheet-modal {
-    position: fixed; top: 64px; right: 0; bottom: 0;
-    width: min(80%, 1200px);
+    position: fixed; inset: 0;
+    top: 64px;
     z-index: 60;
     background: transparent;
-    padding: 10px 10px 10px 0;
+    padding: 6px;
     pointer-events: none;
   }
   .sheet-modal:not(.hidden) .sheet-window { pointer-events: auto; }
   .sheet-window {
-    background: white; border-radius: 14px; width: 100%; height: 100%;
+    background: white; border-radius: 10px; width: 100%; height: 100%;
     display: flex; flex-direction: column;
-    box-shadow: -10px 4px 32px rgba(0,0,0,.18);
+    box-shadow: 0 8px 40px rgba(0,0,0,.28);
     overflow: hidden;
     border: 1px solid var(--border);
   }
-  /* When sheet is open, shrink the main container so question stays visible */
-  body.sheet-open .container { padding-right: calc(min(80%, 1200px) + 16px); transition: padding .25s; }
-  body.sheet-open .topbar { padding-right: 24px; }
-  /* On narrow screens, fall back to bottom-docked panel */
+  /* Ya no contraemos el contenido — la hoja es fullscreen */
+  body.sheet-open .container { padding-right: 0; }
+  body.sheet-open .topbar { padding-right: 0; }
   @media (max-width: 900px) {
-    .sheet-modal { width: 100%; top: auto; right: 0; left: 0; bottom: 0; height: 60vh; padding: 0; }
-    body.sheet-open .container { padding-right: 16px; padding-bottom: calc(60vh + 16px); }
+    .sheet-modal { top: 60px; padding: 4px; }
+  }
+  /* Popup flotante con el enunciado de la pregunta */
+  #sheetQuestionPopup {
+    position: fixed; z-index: 65;
+    top: 76px; left: 20px;
+    width: 320px; max-height: 260px;
+    background: #1f4e79; color: white;
+    border-radius: 10px; padding: 0;
+    box-shadow: 0 6px 24px rgba(0,0,0,.4);
+    display: flex; flex-direction: column;
+    user-select: none;
+    transition: opacity .2s;
+  }
+  #sheetQuestionPopup.hidden { display: none; }
+  #sheetQPopupHeader {
+    background: #163d61; padding: 8px 12px;
+    border-radius: 10px 10px 0 0;
+    display: flex; align-items: center; justify-content: space-between;
+    cursor: grab; font-size: 12px; font-weight: 700; gap: 8px;
+  }
+  #sheetQPopupHeader:active { cursor: grabbing; }
+  #sheetQPopupBody {
+    padding: 10px 12px; font-size: 12px; line-height: 1.5;
+    overflow-y: auto; max-height: 200px; opacity: .92;
+  }
+  #sheetQPopupToggle {
+    background: rgba(255,255,255,.15); border: none; color: white;
+    border-radius: 4px; padding: 2px 7px; cursor: pointer; font-size: 11px;
+    flex-shrink: 0;
   }
   .sheet-header {
     background: #1e7e34; color: white; padding: 10px 16px;
@@ -1472,6 +1499,14 @@ CREATE POLICY "allow_all_examenes" ON examenes FOR ALL USING (true) WITH CHECK (
   <span class="ic">📊</span><span>Hoja de cálculo</span>
 </button>
 <div id="sheetModal" class="sheet-modal hidden">
+<!-- Popup flotante con el enunciado de la pregunta activa -->
+<div id="sheetQuestionPopup" class="hidden">
+  <div id="sheetQPopupHeader">
+    <span id="sheetQPopupTitle">📋 Pregunta</span>
+    <button id="sheetQPopupToggle" onclick="sheetTogglePopup()">— Minimizar</button>
+  </div>
+  <div id="sheetQPopupBody"></div>
+</div>
   <div class="sheet-window">
     <div class="sheet-header">
       <div class="left">
@@ -7280,6 +7315,8 @@ function openSheet(qid, mode) {
     sheetRecalc();
     sheetRender();
     sheetSelect(SHEET.selected);
+    // Mostrar popup con el enunciado de la pregunta
+    sheetShowPopup(targetQid);
 
     const ref = findQuestion(targetQid);
     const applyBtn = document.getElementById('sheetApplyBtn');
@@ -7357,7 +7394,80 @@ function sheetSwitchQuestion(newQid) {
 function closeSheet() {
   document.getElementById('sheetModal').classList.add('hidden');
   document.body.classList.remove('sheet-open');
+  const popup = document.getElementById('sheetQuestionPopup');
+  if (popup) popup.classList.add('hidden');
 }
+
+function sheetTogglePopup() {
+  const body  = document.getElementById('sheetQPopupBody');
+  const btn   = document.getElementById('sheetQPopupToggle');
+  if (!body) return;
+  if (body.style.display === 'none') {
+    body.style.display = '';
+    btn.textContent = '— Minimizar';
+  } else {
+    body.style.display = 'none';
+    btn.textContent = '+ Ver enunciado';
+  }
+}
+
+function sheetShowPopup(qid) {
+  const popup = document.getElementById('sheetQuestionPopup');
+  if (!popup) return;
+  if (!qid || qid === '_scratch') { popup.classList.add('hidden'); return; }
+  const ref = findQuestion(qid);
+  if (!ref || !ref.q) { popup.classList.add('hidden'); return; }
+  const titleEl = document.getElementById('sheetQPopupTitle');
+  const bodyEl  = document.getElementById('sheetQPopupBody');
+  if (titleEl) titleEl.textContent = '📋 Pregunta ' + (ref.q.id || qid).toUpperCase() + ' · ' + (ref.q.points || 0) + ' pts';
+  if (bodyEl)  { bodyEl.textContent = ref.q.text || ref.q.stem || ''; bodyEl.style.display = ''; }
+  const btn = document.getElementById('sheetQPopupToggle');
+  if (btn) btn.textContent = '— Minimizar';
+  // Resetear posicion al abrir
+  popup.style.left = '20px';
+  popup.style.top  = '76px';
+  popup.classList.remove('hidden');
+}
+
+// Hacer el popup arrastrable (mouse + touch)
+(function() {
+  let dragging = false, ox = 0, oy = 0;
+  document.addEventListener('mousedown', function(e) {
+    const hdr = document.getElementById('sheetQPopupHeader');
+    if (!hdr || !hdr.contains(e.target)) return;
+    dragging = true;
+    const p = document.getElementById('sheetQuestionPopup');
+    const r = p.getBoundingClientRect();
+    ox = e.clientX - r.left; oy = e.clientY - r.top;
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', function(e) {
+    if (!dragging) return;
+    const p = document.getElementById('sheetQuestionPopup');
+    let nx = Math.max(0, Math.min(e.clientX - ox, window.innerWidth  - p.offsetWidth));
+    let ny = Math.max(0, Math.min(e.clientY - oy, window.innerHeight - p.offsetHeight));
+    p.style.left = nx + 'px'; p.style.top = ny + 'px';
+  });
+  document.addEventListener('mouseup', function() { dragging = false; });
+  document.addEventListener('touchstart', function(e) {
+    const hdr = document.getElementById('sheetQPopupHeader');
+    if (!hdr || !hdr.contains(e.target)) return;
+    dragging = true;
+    const t = e.touches[0];
+    const p = document.getElementById('sheetQuestionPopup');
+    const r = p.getBoundingClientRect();
+    ox = t.clientX - r.left; oy = t.clientY - r.top;
+  }, { passive: true });
+  document.addEventListener('touchmove', function(e) {
+    if (!dragging) return;
+    const t = e.touches[0];
+    const p = document.getElementById('sheetQuestionPopup');
+    let nx = Math.max(0, Math.min(t.clientX - ox, window.innerWidth  - p.offsetWidth));
+    let ny = Math.max(0, Math.min(t.clientY - oy, window.innerHeight - p.offsetHeight));
+    p.style.left = nx + 'px'; p.style.top = ny + 'px';
+  }, { passive: true });
+  document.addEventListener('touchend', function() { dragging = false; });
+})();
 
 /* =========================================================================
    APLICAR HOJA A LA RESPUESTA
