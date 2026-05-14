@@ -1482,6 +1482,9 @@ CREATE POLICY "allow_all_examenes" ON examenes FOR ALL USING (true) WITH CHECK (
     <div class="card">
       <div class="progress-wrap"><div id="progressBar" class="progress-bar" style="width:0%"></div></div>
       <p class="muted" id="progressLabel">0 / 0 reactivos respondidos · <span id="autosaveLabel" class="save-indicator">Auto-guardado activo</span></p>
+      <div id="simulatorBanner" class="hidden" style="background:#f59e0b;color:#1a1d2e;text-align:center;padding:6px 16px;font-weight:700;font-size:13px;letter-spacing:.5px">
+        🎯 MODO SIMULADOR — Tu práctica no se guardará ni enviará al docente
+      </div>
       <div id="sectionNav" class="section-nav"></div>
     </div>
 
@@ -5368,6 +5371,14 @@ function renderStudent() {
   const brand = document.getElementById('studentExamBrand');
   if (brand) brand.innerHTML = `🛡️ AcadGuard · <span style="font-weight:500;opacity:.9">${escapeHTML(state.bank.title || "Examen")}</span>`;
 
+  // Banner SIMULACRO si aplica
+  const simBanner = document.getElementById('simulatorBanner');
+  if (state.bank && state.bank.simulator) {
+    if (simBanner) simBanner.classList.remove('hidden');
+  } else {
+    if (simBanner) simBanner.classList.add('hidden');
+  }
+
   // Botón Entregar vs Salir según modo
   const submitBtn = document.getElementById('submitOrExitBtn');
   if (submitBtn) {
@@ -6156,9 +6167,74 @@ function genResultCode() {
   return code;
 }
 
-function submitExam(reason) {
+/* Muestra resultados del simulador sin guardar nada */
+function showSimulatorResults() {
+  // Calcular puntaje automático (solo MC y match)
+  let earned = 0, total = 0;
+  state.bank.sections.forEach(sec => {
+    sec.questions.forEach(q => {
+      total += (q.points || 0);
+      const ans = state.session.answers[q.id];
+      if (q.type === 'mc' || q.type === 'calc') {
+        if (ans !== undefined && ans !== null && parseInt(ans) === q.correct) earned += (q.points || 0);
+      } else if (q.type === 'match') {
+        if (ans && typeof ans === 'object') {
+          const pairs = q.pairs || [];
+          let correct = 0;
+          pairs.forEach((p, i) => { if (ans[i] === p.right) correct++; });
+          earned += Math.round((correct / pairs.length) * (q.points || 0));
+        }
+      }
+    });
+  });
+  const pct = total > 0 ? Math.round((earned / total) * 100) : 0;
+  const pass = (state.config.maxAlerts || 70);
+  const passed = pct >= (state.bank.config ? (state.bank.config.pass || 70) : 70);
+
+  // Mostrar modal de resultados simulacro
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:300;display:flex;align-items:center;justify-content:center';
+  overlay.innerHTML = `
+    <div style="background:white;border-radius:16px;padding:32px;max-width:420px;width:90%;text-align:center;box-shadow:0 24px 64px rgba(0,0,0,.4)">
+      <div style="font-size:48px;margin-bottom:8px">${passed ? '🎉' : '💪'}</div>
+      <div style="background:#f59e0b;color:#1a1d2e;padding:4px 16px;border-radius:20px;font-size:12px;font-weight:800;display:inline-block;margin-bottom:16px">SIMULACRO — Sin guardar</div>
+      <h2 style="margin:0 0 4px;color:#1f4e79;font-size:28px">${pct}<span style="font-size:16px">/100</span></h2>
+      <p style="color:#5b6470;margin:0 0 20px">${earned} de ${total} puntos automáticos · ${passed ? '✅ Aprobado' : '❌ Reprobado (práctica)'}</p>
+      <div style="background:#f5f7fa;border-radius:10px;padding:16px;margin-bottom:20px;text-align:left;font-size:13px">
+        <b>📊 Resumen de tu simulacro:</b><br><br>
+        ${state.bank.sections.map(sec => {
+          const secEarned = sec.questions.reduce((s, q) => {
+            const ans = state.session.answers[q.id];
+            if ((q.type === 'mc' || q.type === 'calc') && ans !== undefined && parseInt(ans) === q.correct) return s + (q.points || 0);
+            return s;
+          }, 0);
+          const secTotal = sec.questions.reduce((s, q) => s + (q.points || 0), 0);
+          return `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #e5e7eb">
+            <span>${sec.id}. ${sec.name}</span>
+            <b style="color:${secEarned >= secTotal*0.7 ? '#1e7e34' : '#c00000'}">${secEarned}/${secTotal}</b>
+          </div>`;
+        }).join('')}
+      </div>
+      <p style="font-size:12px;color:#9ca3af;margin:0 0 16px">Este resultado es solo de práctica. Las preguntas abiertas requieren revisión manual del docente.</p>
+      <button onclick="this.closest('div[style]').parentNode.remove();logout();" style="background:#1f4e79;color:white;border:none;border-radius:8px;padding:12px 28px;font-size:15px;font-weight:700;cursor:pointer;width:100%">Cerrar simulacro</button>
+    </div>`;
+  document.body.appendChild(overlay);
+  // Detener el cronómetro
+  if (state.timerId) clearInterval(state.timerId);
+}
+
+async function submitExam(reason) {
   if (state.session && state.session._masterAccess) {
     showToast('Modo observador — el examen no se entrega.', 'warning', 3000);
+    return;
+  }
+  // Modo simulador: no guardar nada, solo mostrar resultados
+  const isSimulator = state.bank && state.bank.simulator;
+  if (isSimulator) {
+    state.session.finished = true;
+    state.session.finishedAt = Date.now();
+    state.session.reason = reason;
+    showSimulatorResults();
     return;
   }
   if (state.session.finished) return;
