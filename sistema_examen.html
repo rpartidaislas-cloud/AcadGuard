@@ -1474,7 +1474,7 @@ CREATE POLICY "allow_all_examenes" ON examenes FOR ALL USING (true) WITH CHECK (
       <span class="badge" id="studentBadge"></span>
       <span id="timerDisplay" class="timer">00:00</span>
       <button class="dark-toggle" onclick="toggleDarkMode()" title="Cambiar modo claro/oscuro">🌙</button>
-      <button class="btn btn-danger btn-sm" onclick="confirmSubmit()">Entregar</button>
+      <button id="submitOrExitBtn" class="btn btn-danger btn-sm" onclick="confirmSubmit()">Entregar</button>
     </div>
   </div>
 
@@ -5359,11 +5359,26 @@ function renderStudent() {
   document.getElementById('screenStudent').classList.remove('hidden');
   document.getElementById('calcFab').classList.remove('hidden');
   document.getElementById('studentBadge').textContent = "👤 " + state.session.student;
-  // Título dinámico con branding de la plataforma
+
   const brand = document.getElementById('studentExamBrand');
   if (brand) brand.innerHTML = `🛡️ AcadGuard · <span style="font-weight:500;opacity:.9">${escapeHTML(state.bank.title || "Examen")}</span>`;
 
-  // Sections nav
+  // Botón Entregar vs Salir según modo
+  const submitBtn = document.getElementById('submitOrExitBtn');
+  if (submitBtn) {
+    if (state.session._masterAccess) {
+      submitBtn.textContent = '🚪 Salir';
+      submitBtn.style.background = '#4b5563';
+      submitBtn.style.borderColor = '#4b5563';
+      submitBtn.onclick = () => logout();
+    } else {
+      submitBtn.textContent = 'Entregar';
+      submitBtn.style.background = '';
+      submitBtn.style.borderColor = '';
+      submitBtn.onclick = () => confirmSubmit();
+    }
+  }
+
   const nav = document.getElementById('sectionNav');
   nav.innerHTML = state.bank.sections.map((s, i) =>
     `<button class="${i === state.session.currentSection ? 'active' : ''} ${isSectionDone(i) ? 'done' : ''}" onclick="goSection(${i})">${s.id}. ${s.name}</button>`
@@ -5371,8 +5386,10 @@ function renderStudent() {
 
   renderQuestions();
   startTimer();
-  startAutoSave();
-  installAntiCheat();
+  if (!state.session._masterAccess) {
+    startAutoSave();
+    installAntiCheat();
+  }
   updateSheetButton();
 }
 
