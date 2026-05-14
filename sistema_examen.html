@@ -3654,10 +3654,13 @@ function toggleStudentDisabled(code) {
     s.disabled = false;
     s.disabledReason = null;
     s._disabledChangedAt = Date.now();
-    s._rehabilitatedAt = Date.now(); // marca para resetear el contador en el alumno
+    s._rehabilitatedAt = Date.now();
     setStudents(list);
-    showToast(s.name + " habilitado. Puede ingresar — su contador de alertas se reinicia.", 'success');
-    syncStudentToSupabase(s);
+    showToast(s.name + " habilitado. Puede ingresar — alertas reiniciadas.", 'success');
+    // Forzar sync a Supabase y esperar antes de que el auto-refresh pueda sobreescribir
+    syncStudentToSupabase(s).then(() => {
+      showToast('✅ ' + s.name + ' habilitado y guardado en la nube', 'success', 2000);
+    });
     if (window.toggleStudentDisabledCloud) window.toggleStudentDisabledCloud(code, false);
   } else {
     const reason = prompt("Razón para deshabilitar a " + s.name + " (opcional):", "");
@@ -10512,9 +10515,9 @@ function loadSupabaseConfigUI() {
       cloud.forEach(cs => {
         const idx = merged.findIndex(ls => ls.code === cs.code);
         if (idx >= 0) {
-          // Solo sobreescribir disabled si no hubo un cambio local reciente (últimos 10 segundos)
+          // Solo sobreescribir disabled si no hubo un cambio local reciente (30 segundos)
           const changedAt = merged[idx]._disabledChangedAt || 0;
-          const localIsRecent = (Date.now() - changedAt) < 10000;
+          const localIsRecent = (Date.now() - changedAt) < 30000;
           if (!localIsRecent) {
             merged[idx].disabled = cs.disabled;
           }
