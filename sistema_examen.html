@@ -4822,21 +4822,40 @@ function renderResults() {
   const results = loadStore(STORE_KEYS.results, []);
   const box = document.getElementById('resultsBox');
   if (results.length === 0) { box.innerHTML = "<p class='muted'>Aún no hay resultados.</p>"; return; }
-  // Toggle: mostrar archivados o activos
+
+  // Filtros activos
   const showArchived = window._showArchivedResults === true;
-  const visible = results.filter(r => showArchived ? r.archived : !r.archived);
-  const visibleWithRealIdx = results.map((r,i)=>i).filter(i => showArchived ? results[i].archived : !results[i].archived);
+  const examFilter   = window._resultExamFilter || '_all';
+
+  // Obtener exámenes únicos presentes en los resultados
+  const examOptions = [...new Map(results.map(r => [r.examId || '_', { id: r.examId || '_', title: r.examTitle || '(sin título)' }])).values()];
+
+  // Aplicar filtros
+  let visible = results.filter(r => showArchived ? r.archived : !r.archived);
+  if (examFilter !== '_all') visible = visible.filter(r => (r.examId || '_') === examFilter);
+  const visibleWithRealIdx = results.map((r,i)=>i).filter(i => {
+    const r = results[i];
+    const archOk = showArchived ? r.archived : !r.archived;
+    const examOk = examFilter === '_all' || (r.examId || '_') === examFilter;
+    return archOk && examOk;
+  });
   const archivedCount = results.filter(r => r.archived).length;
-  // Barra superior con toggles + botón borrar seleccionados
+
+  // Barra superior: tabs + filtro de examen + borrar seleccionados
   let html = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
     <button onclick="window._showArchivedResults=false;renderResults()" class="btn btn-sm ${!showArchived?'btn-primary':'btn-ghost'}" style="font-size:12px">
-      📋 Activos (${results.length - archivedCount})</button>
+      📋 Activos (${results.filter(r=>!r.archived).length})</button>
     <button onclick="window._showArchivedResults=true;renderResults()" class="btn btn-sm ${showArchived?'btn-primary':'btn-ghost'}" style="font-size:12px">
       📦 Archivados (${archivedCount})</button>
+    <span style="margin-left:8px;font-size:12px;color:#6b7280">Filtrar por examen:</span>
+    <select onchange="window._resultExamFilter=this.value;renderResults()" style="font-size:12px;padding:4px 8px;border:1px solid #d1d5db;border-radius:6px;background:white;cursor:pointer">
+      <option value="_all" ${examFilter==='_all'?'selected':''}>📋 Todos los exámenes (${results.filter(r=>!r.archived).length})</option>
+      ${examOptions.map(e => `<option value="${escapeHTML(e.id)}" ${examFilter===e.id?'selected':''}>${escapeHTML(e.title)} (${results.filter(r=>(r.examId||'_')===e.id&&!r.archived).length})</option>`).join('')}
+    </select>
     <button id="btnDeleteSelected" onclick="deleteSelectedResults()" class="btn btn-sm" style="background:var(--accent);color:white;font-size:12px;display:none">
       🗑️ Borrar seleccionados (<span id="selectedCount">0</span>)</button>
   </div>`;
-  if (visible.length === 0) { box.innerHTML = html + "<p class='muted'>" + (showArchived ? "No hay resultados archivados." : "No hay resultados activos.") + "</p>"; return; }
+  if (visible.length === 0) { box.innerHTML = html + "<p class='muted'>No hay resultados para este filtro.</p>"; return; }
   html += "<table><thead><tr><th style='width:32px'><input type='checkbox' id='chkSelectAll' title='Seleccionar todos' onchange='toggleSelectAll(this)'></th><th>Alumno</th><th>Examen</th><th>Código</th><th>Inicio</th><th>Fin</th><th>Razón</th><th>Pts MC</th><th>🎮 Juegos</th><th>📝 Retro</th><th>Total</th><th>Estado</th><th title='Integridad SHA-256 del resultado'>🔐</th></tr></thead><tbody>";
   for (const r of visible) {
     const status = r.scoreTotal >= state.config.pass ? "✅ Aprobado" : "❌ Reprobado";
@@ -5183,11 +5202,33 @@ function startStudentSession(name) {
 }
 
 function resumeStudentSession() {
-  // Restaurar el contador real de alertas (guardado en savedWarnCount).
+  // Si el alumno fue bloqueado por alertas pero el docente lo rehabilitó → limpiar bloqueo
+  if (state.session.blockedByAlerts) {
+    const studs = getStudents();
+    const s = studs.find(st => st.code === state.studentCode);
+    if (s && !s.disabled) {
+      // Docente lo rehabilitó → puede continuar
+      state.session.blockedByAlerts = false;
+      saveCurrentSession();
+      showToast('✅ Rehabilitado por el docente. Continúas donde te quedaste.', 'success', 3000);
+    } else {
+      // Sigue bloqueado — mostrar pantalla de bloqueo
+      const modal = document.getElementById('reentryBlockedModal');
+      if (modal) {
+        const msg = modal.querySelector('p');
+        if (msg) msg.innerHTML = '⛔ Sigues bloqueado por exceso de alertas.<br><br>'
+          + '<b>Tus respuestas están guardadas.</b><br><br>'
+          + 'Espera a que el docente te rehabilite desde el panel de Alumnos.';
+        modal.classList.remove('hidden');
+      }
+      return;
+    }
+  }
+  // Restaurar el contador real de alertas
   state.warnCount = state.session.savedWarnCount != null
     ? state.session.savedWarnCount
     : (state.session.alerts || []).filter(a => a.level === 'warn').length;
-  // Restaurar orden de secciones (si no existe, generarlo compatiblemente)
+  // Restaurar orden de secciones
   if (!state.session.sectionOrder) {
     const nSec = state.bank.sections.length;
     if (state.bank.shuffleSections && nSec > 1) {
@@ -5792,9 +5833,39 @@ function applyWarnPenalty() {
   // Refrescar UI del modal
   const cntEl = document.getElementById('warnCount');
   if (cntEl) cntEl.textContent = state.warnCount;
-  // Si excede el máximo, programar auto-envío
+  // Si excede el máximo → bloquear sin entregar (preservar respuestas)
   if (state.warnCount >= state.config.maxAlerts) {
-    setTimeout(() => submitExam('auto-by-alerts'), 1200);
+    setTimeout(() => blockStudentByAlerts(), 1200);
+  }
+}
+
+/* Bloquea al alumno por exceso de alertas SIN entregar el examen.
+   Sus respuestas quedan guardadas y puede continuar cuando el docente lo rehabilite. */
+function blockStudentByAlerts() {
+  if (!state.session || state.session.finished) return;
+  // Guardar sesión actual con todas las respuestas
+  saveCurrentSession();
+  // Marcar como bloqueado (no como finalizado)
+  state.session.blockedByAlerts = true;
+  saveCurrentSession();
+  // Deshabilitar en Supabase para que no pueda reingresar hasta que el docente lo rehabilite
+  if (_sb && state.studentCode) {
+    _sb.from('alumnos').update({ disabled: true, disabled_reason: 'Exceso de alertas (' + state.warnCount + '/' + state.config.maxAlerts + ')' })
+      .eq('codigo', state.studentCode).then(() => {});
+    // Actualizar localmente también
+    const studs = getStudents();
+    const s = studs.find(st => st.code === state.studentCode);
+    if (s) { s.disabled = true; s.disabledReason = 'Exceso de alertas'; setStudents(studs); }
+  }
+  // Mostrar pantalla de bloqueo (sin entregar)
+  document.getElementById('warnModal').classList.add('hidden');
+  const modal = document.getElementById('reentryBlockedModal');
+  if (modal) {
+    const msg = modal.querySelector('p');
+    if (msg) msg.innerHTML = '⛔ Has superado el límite de ' + state.config.maxAlerts + ' alertas.<br><br>'
+      + '<b>Tu examen NO ha sido entregado.</b> Tus respuestas están guardadas.<br><br>'
+      + 'Espera a que el docente te rehabilite para poder continuar desde donde te quedaste.';
+    modal.classList.remove('hidden');
   }
 }
 
