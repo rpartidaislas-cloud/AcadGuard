@@ -2536,14 +2536,15 @@ const DB = (() => {
         clearTimeout(_idbTimeout);
         resolve();
       };
-      req.onerror   = () => { _loadFromLS(allKeys); resolve(); };
-      req.onblocked = () => { _loadFromLS(allKeys); resolve(); };
-      // Timeout de seguridad: si IDB no responde en 4s (p.ej. dos pestañas), usar localStorage
-      const _idbTimeout = setTimeout(() => {
+      // Timeout de seguridad: si IDB no responde en 4s, usar localStorage
+      let _idbTimeout = setTimeout(() => {
         console.warn('DB.init timeout — usando localStorage como fallback');
         _loadFromLS(allKeys);
         resolve();
       }, 4000);
+
+      req.onerror   = () => { clearTimeout(_idbTimeout); _loadFromLS(allKeys); resolve(); };
+      req.onblocked = () => { clearTimeout(_idbTimeout); _loadFromLS(allKeys); resolve(); };
     });
   }
 
@@ -4704,6 +4705,8 @@ window.logout = function() {
   stopAutoRefresh();
   if (_origLogout) _origLogout.apply(this, arguments);
 };
+
+async function syncAllFromSupabase() {
   if (!_sb) {
     showToast('⚠ Configura Supabase primero — haz clic en el badge Supabase', 'warning', 3000);
     openSupabaseModal();
