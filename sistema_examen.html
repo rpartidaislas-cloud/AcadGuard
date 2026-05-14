@@ -10353,31 +10353,72 @@ function renderSheetForGrading(sheetDataJson) {
   maxRow=Math.min(maxRow,30); maxCol=Math.min(maxCol,10);
   var cols=[];
   for(var c=1;c<=maxCol;c++) cols.push(String.fromCharCode(64+c));
-  var html="<div style='overflow-x:auto;margin:8px 0;border:1px solid #e5e7eb;border-radius:6px'><table style='border-collapse:collapse;font-size:.75em;width:100%'>";
-  html+="<thead><tr><th style='background:#f3f4f6;padding:2px 5px;border:1px solid #e5e7eb;color:#9ca3af;font-size:.85em'></th>";
-  cols.forEach(function(l){ html+="<th style='background:#f3f4f6;padding:2px 6px;border:1px solid #e5e7eb;color:#374151;font-weight:700'>"+l+"</th>"; });
+  var html="<div style='overflow-x:auto;margin:8px 0;border:1px solid #e5e7eb;border-radius:6px'><table style='border-collapse:collapse;font-size:.82em;min-width:500px'>";
+  html+="<thead><tr><th style='background:#f3f4f6;padding:4px 8px;border:1px solid #e5e7eb;color:#9ca3af;font-size:.85em;min-width:32px'></th>";
+  cols.forEach(function(l){ html+="<th style='background:#f3f4f6;padding:4px 10px;border:1px solid #e5e7eb;color:#374151;font-weight:700;min-width:100px'>"+l+"</th>"; });
   html+="</tr></thead><tbody>";
   for(var r=1;r<=maxRow;r++){
     var hasData=false;
     for(var ci=1;ci<=maxCol;ci++){ if(cells[String.fromCharCode(64+ci)+r]) { hasData=true; break; } }
     if(!hasData) continue;
-    html+="<tr><th style='background:#f3f4f6;padding:2px 5px;border:1px solid #e5e7eb;color:#9ca3af;font-size:.8em;text-align:right'>"+r+"</th>";
+    html+="<tr><th style='background:#f3f4f6;padding:4px 6px;border:1px solid #e5e7eb;color:#9ca3af;font-size:.8em;text-align:right'>"+r+"</th>";
     for(var ci2=1;ci2<=maxCol;ci2++){
       var addr2=String.fromCharCode(64+ci2)+r;
       var cell=cells[addr2];
       if(cell&&cell.raw!=null&&cell.raw!==''){
         var isF=typeof cell.raw==='string'&&cell.raw.startsWith('=');
         var disp=cell.val!=null?(typeof cell.val==='number'?cell.val.toLocaleString('es-MX',{maximumFractionDigits:4}):String(cell.val)):String(cell.raw);
-        var tip=isF?'Fórmula: '+cell.raw+(cell.val!=null?' → '+cell.val:''):'';
-        html+="<td title='"+escTA(tip)+"' style='padding:2px 6px;border:1px solid #e5e7eb;background:"+(isF?'#fffbeb':'white')+";color:"+(isF?'#854d0e':'#111827')+"'>"+escTA(disp)+"</td>";
+        var rawDisp=isF?("<span style='font-size:.75em;color:#92400e;display:block'>"+escTA(cell.raw)+"</span>"):"";
+        html+="<td title='"+(isF?'Fórmula: '+escTA(cell.raw):'')+
+          "' style='padding:4px 8px;border:1px solid #e5e7eb;background:"+(isF?'#fffbeb':'white')+
+          ";color:"+(isF?'#854d0e':'#111827')+"'>"+rawDisp+escTA(disp)+"</td>";
       } else {
-        html+="<td style='padding:2px 6px;border:1px solid #e5e7eb'></td>";
+        html+="<td style='padding:4px 8px;border:1px solid #e5e7eb'></td>";
       }
     }
     html+="</tr>";
   }
   html+="</tbody></table></div>";
   if(maxRow>=30||maxCol>=10) html+="<p style='font-size:.7em;color:#9ca3af'>(Se muestran máx. 30 filas × 10 columnas)</p>";
+  return html;
+}
+
+/* Convierte el texto de proc (Celda | Fórmula | Resultado) a tabla HTML */
+function renderProcTextAsTable(procText) {
+  if (!procText) return "";
+  var lines = procText.split('\n');
+  var rows = [];
+  lines.forEach(function(line) {
+    if (!line.trim() || line.startsWith('[') || line.startsWith('---') || line.startsWith('Celda')) return;
+    var parts = line.split('|').map(function(p){ return p.trim(); });
+    if (parts.length >= 2 && parts[0]) rows.push(parts);
+  });
+  if (!rows.length) {
+    return "<pre style='background:#f8fafc;border:1px solid #e5e7eb;border-radius:6px;padding:8px;font-size:.78em;overflow-x:auto;white-space:pre-wrap'>"+escTA(procText)+"</pre>";
+  }
+  var uid = 'sht_'+(Math.random().toString(36).slice(2,7));
+  var html = "<div style='overflow-x:auto;border:1px solid #e5e7eb;border-radius:6px;margin:6px 0'>"
+    +"<table style='border-collapse:collapse;font-size:.85em;width:100%;min-width:400px'>"
+    +"<thead><tr>"
+    +"<th style='background:#1e3a5f;color:white;padding:6px 10px;border:1px solid #374151;min-width:50px'>Celda</th>"
+    +"<th style='background:#1e3a5f;color:white;padding:6px 10px;border:1px solid #374151;min-width:200px'>Fórmula / valor</th>"
+    +"<th style='background:#1e3a5f;color:white;padding:6px 10px;border:1px solid #374151;min-width:120px'>Resultado</th>"
+    +"</tr></thead><tbody>";
+  rows.forEach(function(p, i) {
+    var celda = p[0]||'';
+    var formula = p[1]||'';
+    var resultado = p[2]||'';
+    var isFormula = formula.startsWith('=');
+    var bg = i%2===0?'white':'#f9fafb';
+    html += "<tr style='background:"+bg+"'>"
+      +"<td style='padding:5px 10px;border:1px solid #e5e7eb;font-weight:700;color:#374151;text-align:center'>"+escTA(celda)+"</td>"
+      +"<td style='padding:5px 10px;border:1px solid #e5e7eb;font-family:monospace;color:"+(isFormula?'#92400e':'#111827')+";background:"+(isFormula?'#fffbeb':bg)+"'>"+escTA(formula)+"</td>"
+      +"<td style='padding:5px 10px;border:1px solid #e5e7eb;font-weight:600;color:#1e3a5f'>"+escTA(resultado)+"</td>"
+      +"</tr>";
+  });
+  html += "</tbody></table></div>"
+    +"<details style='margin-top:4px'><summary style='font-size:.75em;color:#6b7280;cursor:pointer'>Ver texto original</summary>"
+    +"<pre style='background:#f8fafc;border:1px solid #e5e7eb;border-radius:6px;padding:8px;font-size:.72em;overflow-x:auto;white-space:pre;margin-top:4px'>"+escTA(procText)+"</pre></details>";
   return html;
 }
 
@@ -10708,11 +10749,13 @@ window.agOpen=function(idx){
           var sheetDataRaw=r.answers?r.answers[q.id+"_sheet_data"]:null;
           var procText=r.answers?r.answers[q.id+"_proc"]:null;
           if(sheetDataRaw){
-            sheetBlock="<div style='margin:10px 0 4px'><div style='font-size:.78em;font-weight:700;color:#374151;margin-bottom:4px'>\u{1F4CA} Hoja de c\u00E1lculo del alumno:</div>"
+            sheetBlock="<div style='margin:10px 0 4px'>"
+              +"<div style='font-size:.78em;font-weight:700;color:#374151;margin-bottom:4px'>📊 Hoja de cálculo del alumno:</div>"
               +renderSheetForGrading(sheetDataRaw)+"</div>";
           } else if(procText){
-            sheetBlock="<div style='margin:10px 0 4px'><div style='font-size:.78em;font-weight:700;color:#374151;margin-bottom:4px'>\u{1F4CA} Procedimiento del alumno (texto):</div>"
-              +"<pre style='background:#f8fafc;border:1px solid #e5e7eb;border-radius:6px;padding:8px;font-size:.75em;overflow-x:auto;white-space:pre-wrap'>"+escTA(procText)+"</pre></div>";
+            sheetBlock="<div style='margin:10px 0 4px'>"
+              +"<div style='font-size:.78em;font-weight:700;color:#374151;margin-bottom:4px'>📊 Hoja de cálculo del alumno:</div>"
+              +renderProcTextAsTable(procText)+"</div>";
           } else {
             sheetBlock="<div style='background:#fef9c3;border:1px solid #fde047;border-radius:6px;padding:7px 10px;font-size:.8em;color:#854d0e;margin:8px 0'>"
               +"\u26A0 El alumno no aplic\u00F3 ninguna hoja de c\u00E1lculo para esta pregunta. Solo se eval\u00FAa la opci\u00F3n elegida.</div>";
@@ -10740,8 +10783,23 @@ window.agOpen=function(idx){
         }
         ch="<div class=\"ag-qc "+cardCls+"\">"
           +"<div class=\"ag-qh\"><span class=\"ag-qn\">P"+(qi+1)+" &bull; "+headLabel+pendBadge+"</span><span class=\"ag-qs\" id=\"agS-"+q.id+"\">"+earned+"/"+pts+" pts</span></div>"
-          +"<p class=\"ag-qt\">"+q.text+"</p><div>"+opts+"</div>"
-          +(ans===undefined?"<p style=\"font-size:.82em;color:#9ca3af;font-style:italic\">Sin respuesta</p>":"")
+          +"<p class=\"ag-qt\">"+q.text+"</p>"
+          +(ans!==undefined&&ans!==q.correct
+            ? "<div style='background:#fef2f2;border:1px solid #fca5a5;border-radius:6px;padding:6px 10px;font-size:.82em;margin:6px 0'>"
+              +"<b style='color:#991b1b'>✗ Alumno eligió:</b> "+(q.options&&q.options[ans]?q.options[ans]:"opción "+ans)
+              +"</div>"
+              +"<div style='background:#ecfdf5;border:1px solid #6ee7b7;border-radius:6px;padding:6px 10px;font-size:.82em;margin:6px 0'>"
+              +"<b style='color:#065f46'>✓ Respuesta correcta:</b> "+(q.options&&q.options[q.correct]?q.options[q.correct]:"opción "+q.correct)
+              +"</div>"
+            : ans===q.correct
+              ? "<div style='background:#ecfdf5;border:1px solid #6ee7b7;border-radius:6px;padding:6px 10px;font-size:.82em;margin:6px 0'>"
+                +"<b style='color:#065f46'>✓ Correcta:</b> "+(q.options&&q.options[q.correct]?q.options[q.correct]:"opción "+q.correct)
+                +"</div>"
+              : "<div style='background:#fef9c3;border:1px solid #fde047;border-radius:6px;padding:6px 10px;font-size:.82em;margin:6px 0;color:#854d0e'>"
+                +"<b>⚠ Sin respuesta.</b> Respuesta correcta: "+(q.options&&q.options[q.correct]?q.options[q.correct]:"opción "+q.correct)
+                +"</div>"
+          )
+          +"<div>"+opts+"</div>"
           +contestMC+(sheetBlock||"")+scoreRow+fbBoxMC+"</div>";
       } else if(q.type==="open"){
         earned=ms!==undefined?ms:0; GS.scores[q.id]=earned; total+=earned;
