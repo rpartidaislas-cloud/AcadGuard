@@ -1532,15 +1532,24 @@ CREATE POLICY "allow_all_examenes" ON examenes FOR ALL USING (true) WITH CHECK (
       </span>
       <span class="tool-sep"></span>
       <button class="op-btn" onclick="sheetCommitCurrent()" style="background:#1e7e34;color:white;border-color:#1e7e34" title="Confirmar valor de la celda (Enter)">✓ Confirmar</button>
+      <span class="tool-sep"></span>
+      <span class="tool-group">
+        <button class="op-btn" onclick="sheetCopySelection()" title="Copiar celda(s) seleccionadas (Ctrl+C)" style="color:#1f4e79">⎘ Copiar</button>
+        <button class="op-btn" onclick="sheetPasteSelection()" title="Pegar en celda activa (Ctrl+V)" style="color:#1f4e79">⎙ Pegar</button>
+      </span>
+      <span class="tool-sep"></span>
+      <span class="tool-group">
+        <button class="op-btn" onclick="sheetAddRows(10)" title="Agregar 10 filas abajo" style="color:#059669">➕ 10 filas</button>
+        <button class="op-btn" onclick="sheetAddCols(4)" title="Agregar 4 columnas a la derecha" style="color:#059669">➕ 4 col</button>
+      </span>
     </div>
     <div class="sheet-grid-wrap">
       <table class="sheet-grid" id="sheetTable"></table>
       <div id="sheetFillHandle" class="sheet-fill-handle" onmousedown="sheetFillHandleDown(event)" title="Arrastra para copiar/extender el contenido"></div>
     </div>
     <div class="sheet-help">
-      <b>📌 Fórmulas vivas:</b> las celdas con fórmula muestran un <span style="display:inline-block;width:0;height:0;border-style:solid;border-width:6px 6px 0 0;border-color:#1e7e34 transparent transparent transparent"></span> verde en la esquina. Su valor se actualiza automáticamente cuando cambian las celdas referenciadas. 
-      <b>Para ver la fórmula:</b> click en la celda y mira la barra <b style="background:#1e7e34;color:white;padding:1px 5px;border-radius:3px">ƒx</b> de arriba. 
-      <b>Para editar:</b> doble click o F2.
+      <b>📌 Fórmulas vivas:</b> las celdas con fórmula muestran un <span style="display:inline-block;width:0;height:0;border-style:solid;border-width:6px 6px 0 0;border-color:#1e7e34 transparent transparent transparent"></span> verde en la esquina.
+      <b>Navegar:</b> flechas ↑↓←→ o Tab · <b>Editar:</b> doble clic o F2 · <b>Copiar/Pegar:</b> Ctrl+C / Ctrl+V · <b>Deshacer/Rehacer:</b> Ctrl+Z / Ctrl+Y
     </div>
   </div>
 </div>
@@ -5554,9 +5563,12 @@ function onKeyDown(e) {
     }
     return;
   }
-  // Block common shortcuts: Ctrl+C, Ctrl+V, Ctrl+P, Ctrl+S, F12, Ctrl+Shift+I
+  // Block common shortcuts: Ctrl+C, Ctrl+V, Ctrl+P, Ctrl+S EXCEPT inside the sheet modal
   const k = e.key.toLowerCase();
+  const sheetOpen = document.getElementById('sheetModal') && !document.getElementById('sheetModal').classList.contains('hidden');
   if (e.ctrlKey && ['c', 'v', 'p', 's', 'u'].includes(k)) {
+    // Permitir Ctrl+C y Ctrl+V dentro del modal de la hoja de cálculo
+    if (sheetOpen && (k === 'c' || k === 'v')) return;
     e.preventDefault();
     raiseAlert("Atajo bloqueado: Ctrl+" + k.toUpperCase(), "warn", "");
   }
@@ -6109,11 +6121,12 @@ function calcEval() {
    SPREADSHEET ENGINE  (mini Excel) — UNA HOJA POR PREGUNTA
    ========================================================================= */
 const SHEET = {
-  rows: 20,
-  cols: 8,        // A..H
-  cells: {},      // { 'A1': { raw: '5', val: 5 } }  (de la pregunta activa)
+  rows: 40,
+  cols: 12,       // A..L
+  cells: {},
   selected: 'A1',
-  activeQid: null, // pregunta a la que pertenece la hoja actualmente abierta
+  clipboard: null, // { cells: {}, rows, cols, startAddr }
+  activeQid: null,
   storeKey: () => 'exam_sheets_' + (state.session ? state.session.student : 'anon'),
   visibleQTypes: ['calc', 'open']
 };
@@ -6261,6 +6274,14 @@ function sheetGlobalKeyHandler(e) {
       ((e.ctrlKey || e.metaKey) && e.shiftKey && k.toLowerCase() === 'z')) {
     e.preventDefault(); sheetRedo(); return;
   }
+  // Ctrl+C: copiar
+  if ((e.ctrlKey || e.metaKey) && k.toLowerCase() === 'c') {
+    e.preventDefault(); sheetCopySelection(); return;
+  }
+  // Ctrl+V: pegar
+  if ((e.ctrlKey || e.metaKey) && k.toLowerCase() === 'v') {
+    e.preventDefault(); sheetPasteSelection(); return;
+  }
   // Navegación con flechas
   if (k === 'ArrowDown') { e.preventDefault(); sheetMove(0, 1); return; }
   if (k === 'ArrowUp')   { e.preventDefault(); sheetMove(0, -1); return; }
@@ -6285,6 +6306,87 @@ function sheetGlobalKeyHandler(e) {
 /* =========================================================================
    UNDO / REDO
    ========================================================================= */
+/* =========================================================================
+   COPY / PASTE
+   ========================================================================= */
+function sheetCopySelection() {
+  const sel = SHEET.selected;
+  if (!sel) return;
+  // Si hay selección múltiple (range) copiarla; si no, solo la celda activa
+  const range = SHEET.selRange || { r1: sel, r2: sel };
+  SHEET.clipboard = { cells: {}, anchor: sel };
+  // Determinar límites del rango
+  const parseAddr = a => { const m = a.match(/([A-Z]+)(\d+)/); return m ? { c: m[1].charCodeAt(0)-65, r: parseInt(m[2]) } : null; };
+  const a1 = parseAddr(range.r1 || sel), a2 = parseAddr(range.r2 || sel);
+  if (!a1 || !a2) return;
+  const minR = Math.min(a1.r, a2.r), maxR = Math.max(a1.r, a2.r);
+  const minC = Math.min(a1.c, a2.c), maxC = Math.max(a1.c, a2.c);
+  for (let r = minR; r <= maxR; r++) {
+    for (let c = minC; c <= maxC; c++) {
+      const addr = String.fromCharCode(65+c)+r;
+      const relKey = (r-minR)+'_'+(c-minC);
+      SHEET.clipboard.cells[relKey] = SHEET.cells[addr] ? JSON.parse(JSON.stringify(SHEET.cells[addr])) : null;
+    }
+  }
+  SHEET.clipboard.rows = maxR - minR + 1;
+  SHEET.clipboard.cols = maxC - minC + 1;
+  sheetShowToast('⎘ Copiado (' + SHEET.clipboard.rows + '×' + SHEET.clipboard.cols + ' celda' + (SHEET.clipboard.rows*SHEET.clipboard.cols>1?'s':'')+')');
+}
+
+function sheetPasteSelection() {
+  if (!SHEET.clipboard || !SHEET.selected) return;
+  const parseAddr = a => { const m = a.match(/([A-Z]+)(\d+)/); return m ? { c: m[1].charCodeAt(0)-65, r: parseInt(m[2]) } : null; };
+  const dest = parseAddr(SHEET.selected);
+  if (!dest) return;
+  sheetRecordHistory();
+  for (const relKey of Object.keys(SHEET.clipboard.cells)) {
+    const [dr, dc] = relKey.split('_').map(Number);
+    const tr = dest.r + dr, tc = dest.c + dc;
+    if (tr < 1 || tc < 0 || tr > SHEET.rows || tc >= SHEET.cols) continue;
+    const destAddr = String.fromCharCode(65+tc)+tr;
+    const src = SHEET.clipboard.cells[relKey];
+    if (src) { SHEET.cells[destAddr] = JSON.parse(JSON.stringify(src)); }
+    else { delete SHEET.cells[destAddr]; }
+  }
+  sheetRenderAll();
+  sheetSave();
+  sheetShowToast('⎙ Pegado');
+}
+
+function sheetShowToast(msg) {
+  let t = document.getElementById('sheetToast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'sheetToast';
+    t.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1e3a5f;color:white;padding:7px 18px;border-radius:20px;font-size:13px;font-weight:600;z-index:9999;pointer-events:none;transition:opacity .3s';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = '1';
+  clearTimeout(t._to);
+  t._to = setTimeout(() => { t.style.opacity = '0'; }, 1500);
+}
+
+/* =========================================================================
+   EXTENDER FILAS / COLUMNAS
+   ========================================================================= */
+function sheetAddRows(n) {
+  n = n || 10;
+  SHEET.rows += n;
+  sheetBuild();
+  sheetRenderAll();
+  sheetShowToast('➕ ' + n + ' filas agregadas — total: ' + SHEET.rows);
+}
+
+function sheetAddCols(n) {
+  n = n || 4;
+  if (SHEET.cols + n > 26) { sheetShowToast('⚠ Máximo 26 columnas (A-Z)'); return; }
+  SHEET.cols += n;
+  sheetBuild();
+  sheetRenderAll();
+  sheetShowToast('➕ ' + n + ' columnas agregadas — total: ' + SHEET.cols);
+}
+
 function sheetSnapshot() {
   // Hace snapshot del estado actual de las celdas para historial
   return JSON.stringify(SHEET.cells);
@@ -10350,36 +10452,37 @@ function renderSheetForGrading(sheetDataJson) {
     var row=parseInt(m[2]);
     if(row>maxRow) maxRow=row; if(col>maxCol) maxCol=col;
   });
-  maxRow=Math.min(maxRow,30); maxCol=Math.min(maxCol,10);
+  // Mostrar 3 filas/cols extra de contexto
+  maxRow=Math.min(maxRow+3, 50); maxCol=Math.min(maxCol+2, 14);
   var cols=[];
   for(var c=1;c<=maxCol;c++) cols.push(String.fromCharCode(64+c));
-  var html="<div style='overflow-x:auto;margin:8px 0;border:1px solid #e5e7eb;border-radius:6px'><table style='border-collapse:collapse;font-size:.82em;min-width:500px'>";
-  html+="<thead><tr><th style='background:#f3f4f6;padding:4px 8px;border:1px solid #e5e7eb;color:#9ca3af;font-size:.85em;min-width:32px'></th>";
-  cols.forEach(function(l){ html+="<th style='background:#f3f4f6;padding:4px 10px;border:1px solid #e5e7eb;color:#374151;font-weight:700;min-width:100px'>"+l+"</th>"; });
+  var html="<div style='overflow:auto;max-height:420px;border:2px solid #3b82f6;border-radius:8px;background:white;font-family:Calibri,Arial,sans-serif'>"
+    +"<table style='border-collapse:collapse;font-size:.88em;min-width:500px'>";
+  html+="<thead><tr style='position:sticky;top:0;z-index:2'>"
+    +"<th style='background:#e8eaed;padding:4px 8px;border:1px solid #c7c7c7;min-width:36px;font-size:.78em;color:#666'></th>";
+  cols.forEach(function(l){ html+="<th style='background:#e8eaed;padding:4px 10px;border:1px solid #c7c7c7;min-width:90px;text-align:center;font-size:.8em;font-weight:700;color:#333'>"+l+"</th>"; });
   html+="</tr></thead><tbody>";
   for(var r=1;r<=maxRow;r++){
-    var hasData=false;
-    for(var ci=1;ci<=maxCol;ci++){ if(cells[String.fromCharCode(64+ci)+r]) { hasData=true; break; } }
-    if(!hasData) continue;
-    html+="<tr><th style='background:#f3f4f6;padding:4px 6px;border:1px solid #e5e7eb;color:#9ca3af;font-size:.8em;text-align:right'>"+r+"</th>";
+    html+="<tr><th style='background:#e8eaed;padding:4px 8px;border:1px solid #c7c7c7;color:#666;font-size:.78em;text-align:right;min-width:36px'>"+r+"</th>";
     for(var ci2=1;ci2<=maxCol;ci2++){
       var addr2=String.fromCharCode(64+ci2)+r;
       var cell=cells[addr2];
       if(cell&&cell.raw!=null&&cell.raw!==''){
         var isF=typeof cell.raw==='string'&&cell.raw.startsWith('=');
         var disp=cell.val!=null?(typeof cell.val==='number'?cell.val.toLocaleString('es-MX',{maximumFractionDigits:4}):String(cell.val)):String(cell.raw);
-        var rawDisp=isF?("<span style='font-size:.75em;color:#92400e;display:block'>"+escTA(cell.raw)+"</span>"):"";
-        html+="<td title='"+(isF?'Fórmula: '+escTA(cell.raw):'')+
-          "' style='padding:4px 8px;border:1px solid #e5e7eb;background:"+(isF?'#fffbeb':'white')+
-          ";color:"+(isF?'#854d0e':'#111827')+"'>"+rawDisp+escTA(disp)+"</td>";
+        html+="<td title='"+(isF?'Fórmula: '+escTA(cell.raw):'')+"' style='padding:4px 8px;border:1px solid #d0d0d0;"
+          +"background:"+(isF?'#fffbeb':'white')+";color:"+(isF?'#854d0e':'#111827')
+          +";position:relative;white-space:nowrap'>"
+          +(isF?"<span style='position:absolute;top:0;right:0;width:0;height:0;border-style:solid;border-width:0 6px 6px 0;border-color:transparent #1e7e34 transparent transparent'></span>":"")
+          +escTA(disp)+"</td>";
       } else {
-        html+="<td style='padding:4px 8px;border:1px solid #e5e7eb'></td>";
+        html+="<td style='padding:4px 8px;border:1px solid #e5e7eb;background:white;min-width:90px'></td>";
       }
     }
     html+="</tr>";
   }
   html+="</tbody></table></div>";
-  if(maxRow>=30||maxCol>=10) html+="<p style='font-size:.7em;color:#9ca3af'>(Se muestran máx. 30 filas × 10 columnas)</p>";
+  html+="<div style='font-size:.72em;color:#6b7280;margin-top:3px;text-align:right'>⬅ Desliza horizontalmente · ↕ Scroll vertical · "+addrs.length+" celda(s) con datos</div>";
   return html;
 }
 
