@@ -3653,9 +3653,10 @@ function toggleStudentDisabled(code) {
   if (s.disabled) {
     s.disabled = false;
     s.disabledReason = null;
+    s._disabledChangedAt = Date.now();
+    s._rehabilitatedAt = Date.now(); // marca para resetear el contador en el alumno
     setStudents(list);
-    showToast(s.name + " habilitado. Puede ingresar al examen.", 'success');
-    // Sincronizar con Supabase usando la función completa (evita error de columna inexistente)
+    showToast(s.name + " habilitado. Puede ingresar — su contador de alertas se reinicia.", 'success');
     syncStudentToSupabase(s);
     if (window.toggleStudentDisabledCloud) window.toggleStudentDisabledCloud(code, false);
   } else {
@@ -3663,9 +3664,9 @@ function toggleStudentDisabled(code) {
     if (reason === null) return;
     s.disabled = true;
     s.disabledReason = reason || 'Decisión del docente';
+    s._disabledChangedAt = Date.now();
     setStudents(list);
     showToast(s.name + " deshabilitado.", 'warning');
-    // Sincronizar con Supabase
     syncStudentToSupabase(s);
     if (window.toggleStudentDisabledCloud) window.toggleStudentDisabledCloud(code, true);
   }
@@ -5205,10 +5206,12 @@ function resumeStudentSession() {
     const studs = getStudents();
     const s = studs.find(st => st.code === state.studentCode);
     if (s && !s.disabled) {
-      // Docente lo rehabilitó → puede continuar
+      // Docente lo rehabilitó → limpiar bloqueo Y RESETEAR contador de alertas
       state.session.blockedByAlerts = false;
+      state.warnCount = 0;                    // contador a 0 para que pueda trabajar
+      state.session.savedWarnCount = 0;
       saveCurrentSession();
-      showToast('✅ Rehabilitado por el docente. Continúas donde te quedaste.', 'success', 3000);
+      showToast('✅ Rehabilitado. Continúas donde te quedaste con alertas reiniciadas.', 'success', 4000);
     } else {
       // Sigue bloqueado — mostrar pantalla de bloqueo
       const modal = document.getElementById('reentryBlockedModal');
@@ -7253,50 +7256,51 @@ function sheetFormatCell(fmt) {
 }
 
 function openSheet(qid, mode) {
-  // Si NO se pasa qid: abrimos la hoja "scratch" única, compartida entre TODAS las
-  // secciones y preguntas. Es el botón flotante general (🧮). Esa hoja NO se puede
-  // aplicar como respuesta; sólo es para hacer cálculos auxiliares.
-  let targetQid = qid;
-  if (!targetQid) {
-    targetQid = '_scratch';
-    mode = 'scratch';
-  }
-  sheetLoadForQuestion(targetQid);
-  SHEET.mode = mode || null; // 'scratch' o null
-  SHEET.history = { stack: [], redo: [] };
-  document.getElementById('sheetModal').classList.remove('hidden');
-  document.body.classList.add('sheet-open');
-  if (!document.getElementById('sheetTable').children.length) sheetBuild();
-  sheetRecalc();
-  sheetRender();
-  sheetSelect(SHEET.selected);
+  try {
+    let targetQid = qid;
+    if (!targetQid) { targetQid = '_scratch'; mode = 'scratch'; }
+    sheetLoadForQuestion(targetQid);
+    SHEET.mode = mode || null;
+    SHEET.history = { stack: [], redo: [] };
 
-  // Mostrar/ocultar botón "Aplicar a la respuesta" según el tipo de pregunta y modo
-  const ref = findQuestion(targetQid);
-  const applyBtn = document.getElementById('sheetApplyBtn');
-  if (applyBtn) {
-    const canApply = SHEET.mode !== 'scratch'
-                     && ref
-                     && (ref.q.type === 'calc' || ref.q.type === 'open');
-    applyBtn.style.display = canApply ? '' : 'none';
-  }
+    const modal = document.getElementById('sheetModal');
+    modal.classList.remove('hidden');
 
-  // Poblar selector con las preguntas calc/open de la sección actual + opción scratch.
-  populateSheetQuestionSelector(targetQid);
+    // Fix Safari/Mac: en pantalla completa el z-index puede fallar
+    // Forzar repaint sacando y volviendo a poner el modal
+    modal.style.display = 'none';
+    modal.offsetHeight; // fuerza reflow
+    modal.style.display = '';
 
-  // Texto contextual
-  const ctxEl = document.getElementById('sheetCtx');
-  if (targetQid === '_scratch') {
-    ctxEl.textContent = `🧮 Hoja general · Para apoyar tus cálculos en cualquier pregunta · NO se aplica a ninguna respuesta`;
-  } else if (ref) {
-    const cellsCount = Object.keys(SHEET.cells).filter(a => SHEET.cells[a].raw !== '' && SHEET.cells[a].raw != null).length;
-    ctxEl.textContent =
-      `Pregunta ${targetQid.toUpperCase()} · Sección ${ref.sec.id} · ${cellsCount} celdas con datos`;
+    document.body.classList.add('sheet-open');
+    if (!document.getElementById('sheetTable').children.length) sheetBuild();
+    sheetRecalc();
+    sheetRender();
+    sheetSelect(SHEET.selected);
+
+    const ref = findQuestion(targetQid);
+    const applyBtn = document.getElementById('sheetApplyBtn');
+    if (applyBtn) {
+      const canApply = SHEET.mode !== 'scratch' && ref
+                       && (ref.q.type === 'calc' || ref.q.type === 'open');
+      applyBtn.style.display = canApply ? '' : 'none';
+    }
+    populateSheetQuestionSelector(targetQid);
+    const ctxEl = document.getElementById('sheetCtx');
+    if (targetQid === '_scratch') {
+      ctxEl.textContent = 'Hoja general - Para apoyar tus calculos en cualquier pregunta';
+    } else if (ref) {
+      const cellsCount = Object.keys(SHEET.cells).filter(a => SHEET.cells[a].raw !== '' && SHEET.cells[a].raw != null).length;
+      ctxEl.textContent = `Pregunta ${targetQid.toUpperCase()} - Seccion ${ref.sec.id} - ${cellsCount} celdas con datos`;
+    }
+    setTimeout(() => {
+      const focusCell = document.getElementById('cell-' + SHEET.selected);
+      if (focusCell) focusCell.focus();
+    }, 50);
+  } catch(err) {
+    console.error('openSheet error:', err);
+    alert('No se pudo abrir la hoja de calculo: ' + err.message + '\nIntenta recargar la pagina (F5) y volver a entrar con tu codigo.');
   }
-  setTimeout(() => {
-    const focusCell = document.getElementById('cell-' + SHEET.selected);
-    if (focusCell) focusCell.focus();
-  }, 50);
 }
 
 /* Llena el selector de preguntas dentro del modal de la hoja con las preguntas
@@ -7541,19 +7545,23 @@ function sheetCommitCurrent() {
 
 /* Show/hide the sheet button depending on current section's question types */
 function updateSheetButton() {
-  if (!state.session || state.role !== 'student') {
-    document.getElementById('sheetFab').classList.add('hidden');
-    return;
+  try {
+    if (!state.session || state.role !== 'student') {
+      document.getElementById('sheetFab').classList.add('hidden');
+      return;
+    }
+    document.getElementById('sheetFab').classList.remove('hidden');
+    const sec = state.bank.sections[state.session.currentSection];
+    if (!sec) return;
+    const ctx = sec.questions.filter(q => SHEET.visibleQTypes.includes(q.type)).length;
+    document.getElementById('sheetCtx').textContent = ctx > 0
+      ? `Seccion ${sec.id} - ${ctx} reactivo(s) requieren calculo`
+      : `Seccion ${sec.id} - Hoja disponible como apoyo`;
+  } catch(e) {
+    // Si falla, al menos mostrar el boton
+    const fab = document.getElementById('sheetFab');
+    if (fab && state.role === 'student') fab.classList.remove('hidden');
   }
-  // El botón flotante siempre está disponible: la hoja se puede usar como apoyo
-  // para cualquier pregunta, no solo las de cálculo.
-  document.getElementById('sheetFab').classList.remove('hidden');
-  // Update context label
-  const sec = state.bank.sections[state.session.currentSection];
-  const ctx = sec.questions.filter(q => SHEET.visibleQTypes.includes(q.type)).length;
-  document.getElementById('sheetCtx').textContent = ctx > 0
-    ? `Sección ${sec.id} · ${ctx} reactivo(s) requieren cálculo`
-    : `Sección ${sec.id} · Hoja disponible como apoyo`;
 }
 
 /* =========================================================================
@@ -9800,10 +9808,12 @@ async function syncStudentsFromSupabase() {
     for (const cs of fromCloud) {
       const idx = merged.findIndex(ls => ls.code === cs.code);
       if (idx >= 0) {
-        // Actualizar desde Supabase (la nube es autoritativa para estos campos)
-        merged[idx].disabled        = cs.disabled;
-        merged[idx].disabledReason  = cs.disabledReason;
-        // Solo actualizar horario si Supabase lo tiene definido (evita borrar horario local recién asignado)
+        // No sobreescribir disabled si hubo cambio local reciente (30 segundos)
+        const changedAt = merged[idx]._disabledChangedAt || 0;
+        if ((Date.now() - changedAt) >= 30000) {
+          merged[idx].disabled       = cs.disabled;
+          merged[idx].disabledReason = cs.disabledReason;
+        }
         if (cs.scheduledStart !== null) merged[idx].scheduledStart = cs.scheduledStart;
         if (cs.scheduledEnd   !== null) merged[idx].scheduledEnd   = cs.scheduledEnd;
       } else {
@@ -10501,8 +10511,14 @@ function loadSupabaseConfigUI() {
       let added = 0;
       cloud.forEach(cs => {
         const idx = merged.findIndex(ls => ls.code === cs.code);
-        if (idx >= 0) { merged[idx].disabled = cs.disabled; }
-        else { merged.push(cs); added++; }
+        if (idx >= 0) {
+          // Solo sobreescribir disabled si no hubo un cambio local reciente (últimos 10 segundos)
+          const changedAt = merged[idx]._disabledChangedAt || 0;
+          const localIsRecent = (Date.now() - changedAt) < 10000;
+          if (!localIsRecent) {
+            merged[idx].disabled = cs.disabled;
+          }
+        } else { merged.push(cs); added++; }
       });
       if (window.setStudents) window.setStudents(merged);
       if (added > 0 && window.showToast)
