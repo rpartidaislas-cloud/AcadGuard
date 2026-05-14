@@ -1498,15 +1498,16 @@ CREATE POLICY "allow_all_examenes" ON examenes FOR ALL USING (true) WITH CHECK (
 <button id="sheetFab" class="hidden" onclick="openSheet()" title="Abrir hoja de cálculo">
   <span class="ic">📊</span><span>Hoja de cálculo</span>
 </button>
-<div id="sheetModal" class="sheet-modal hidden">
-<!-- Popup flotante con el enunciado de la pregunta activa -->
-<div id="sheetQuestionPopup" class="hidden">
+<!-- Popup flotante arrastrable con el enunciado de la pregunta — FUERA del sheet-modal para recibir pointer-events -->
+<div id="sheetQuestionPopup" class="hidden" style="pointer-events:auto">
   <div id="sheetQPopupHeader">
     <span id="sheetQPopupTitle">📋 Pregunta</span>
     <button id="sheetQPopupToggle" onclick="sheetTogglePopup()">— Minimizar</button>
   </div>
   <div id="sheetQPopupBody"></div>
 </div>
+
+<div id="sheetModal" class="sheet-modal hidden">
   <div class="sheet-window">
     <div class="sheet-header">
       <div class="left">
@@ -2936,37 +2937,61 @@ function loginStudent() {
     if (btn) { btn.disabled = true; btn.textContent = '⏳ Verificando...'; }
 
     // ── CÓDIGO MAESTRO DEL DOCENTE ──────────────────────────────────────────
-    // Acceso de observador: ve el examen sin restricciones, sin anti-trampa,
-    // sin tiempo límite. No deja resultado ni alerta.
     if (code === '2960168') {
       if (btn) { btn.disabled = false; btn.textContent = 'Ingresar al examen'; }
-      const examId = getActiveExamId();
-      const exam   = getExam(examId);
-      if (!exam) { showToast('No hay examen activo seleccionado.', 'error', 3000); return; }
+      const exams   = getExams();
+      const examIds = Object.keys(exams).filter(k => k && k !== 'undefined');
+      if (!examIds.length) { showToast('No hay examenes disponibles.', 'error', 3000); return; }
+
+      // Construir selector visual de examen
+      const opts = examIds.map(id => `<option value="${id}">${exams[id].title || id}</option>`).join('');
+      const sel  = document.getElementById('loginStudentName');
+      const prev = sel ? sel.value : '';
+
+      const examId = await new Promise(resolve => {
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;display:flex;align-items:center;justify-content:center';
+        overlay.innerHTML = `
+          <div style="background:white;border-radius:14px;padding:28px;min-width:340px;max-width:480px;box-shadow:0 20px 60px rgba(0,0,0,.4)">
+            <h2 style="margin:0 0 6px;color:#1f4e79">🔑 Acceso Docente</h2>
+            <p style="color:#5b6470;font-size:13px;margin:0 0 16px">Selecciona el examen que deseas revisar:</p>
+            <select id="masterExamSel" style="width:100%;padding:10px;border:2px solid #2e75b6;border-radius:8px;font-size:14px;margin-bottom:16px">${opts}</select>
+            <div style="display:flex;gap:10px;justify-content:flex-end">
+              <button id="masterCancel" style="padding:10px 18px;border:1px solid #d1d5db;border-radius:8px;cursor:pointer;background:white">Cancelar</button>
+              <button id="masterEnter" style="padding:10px 18px;background:#1f4e79;color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer">Ingresar →</button>
+            </div>
+          </div>`;
+        document.body.appendChild(overlay);
+        overlay.querySelector('#masterEnter').onclick = () => {
+          const v = overlay.querySelector('#masterExamSel').value;
+          document.body.removeChild(overlay);
+          resolve(v);
+        };
+        overlay.querySelector('#masterCancel').onclick = () => {
+          document.body.removeChild(overlay);
+          resolve(null);
+        };
+      });
+
+      if (!examId) return;
+      const exam = getExam(examId);
+      if (!exam) { showToast('Examen no encontrado.', 'error', 3000); return; }
+
       state.user        = 'Docente (Observador)';
       state.role        = 'student';
       state.studentCode = code;
       state.bank        = exam;
       state.session     = {
-        student:        'Docente (Observador)',
-        examId:         examId,
-        examTitle:      exam.title,
-        startedAt:      Date.now(),
-        currentSection: 0,
-        sectionOrder:   exam.sections.map((_,i) => i),
-        answers:        {},
-        alerts:         [],
-        savedWarnCount: 0,
-        _masterAccess:  true   // marca: no entregar ni generar alertas
+        student: 'Docente (Observador)', examId, examTitle: exam.title,
+        startedAt: Date.now(), currentSection: 0,
+        sectionOrder: exam.sections.map((_,i) => i),
+        answers: {}, alerts: [], savedWarnCount: 0,
+        _masterAccess: true
       };
-      // Aplicar config del examen
       if (exam.config) state.config = Object.assign({}, state.config, exam.config);
-      // Deshabilitar anti-trampa y cronómetro
-      state.config.idle       = 99999;
-      state.config.maxAlerts  = 99999;
-      state.config.minutes    = 999;
+      state.config.idle = 99999; state.config.maxAlerts = 99999; state.config.minutes = 999;
       renderStudent();
-      showToast('🔑 Acceso docente — modo observador sin restricciones', 'success', 4000);
+      showToast('🔑 Acceso docente — ' + exam.title, 'success', 4000);
       return;
     }
     // ────────────────────────────────────────────────────────────────────────
