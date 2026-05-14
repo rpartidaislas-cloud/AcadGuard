@@ -1057,6 +1057,7 @@
     <div class="right">
       <span id="supabaseTopBadge" title="Configurar Supabase" style="font-size:11px;padding:3px 10px;border-radius:999px;background:rgba(255,255,255,.15);color:rgba(255,255,255,.8);cursor:pointer" onclick="openSupabaseModal()">⚫ Supabase</span>
       <button onclick="syncAllFromSupabase()" id="syncAllBtn" title="Actualizar todo desde Supabase: exámenes, alumnos y resultados" style="font-size:12px;font-weight:600;padding:5px 12px;border-radius:6px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:white;cursor:pointer;transition:all .2s" onmouseover="this.style.background='rgba(255,255,255,.22)'" onmouseout="this.style.background='rgba(255,255,255,.12)'">🔄 Sincronizar</button>
+      <button onclick="toggleAutoRefresh()" id="autoRefreshBtn" title="Activar actualización automática cada 30 segundos" style="font-size:12px;font-weight:600;padding:5px 12px;border-radius:6px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.7);cursor:pointer;transition:all .2s">⏱ Auto</button>
       <button class="dark-toggle" onclick="toggleDarkMode()" id="darkToggleAdmin" title="Cambiar modo claro/oscuro">🌙</button>
       <span class="badge" id="adminUserBadge"></span>
       <button class="btn btn-ghost btn-sm" onclick="logout()" style="color:white;border-color:rgba(255,255,255,.5)">Salir</button>
@@ -1751,11 +1752,14 @@ CREATE POLICY "allow_all_examenes" ON examenes FOR ALL USING (true) WITH CHECK (
   </div>
 </div>
 <!-- ================= BONUS GAME MODAL ================= -->
-<div id="bonusGameModal" class="modal-bg hidden">
-  <div class="modal" style="max-width:560px">
-    <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #e7ecf3;padding-bottom:10px;margin-bottom:14px">
+<div id="bonusGameModal" class="modal-bg hidden" onclick="if(event.target===this)closeBonusGame()">
+  <div class="modal" style="max-width:560px;max-height:85vh;overflow-y:auto;position:relative">
+    <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #e7ecf3;padding-bottom:10px;margin-bottom:14px;position:sticky;top:0;background:var(--panel,white);z-index:1;padding-top:4px">
       <h2 style="margin:0;color:#7a5300" id="bonusGameTitle">🎮 Bonus</h2>
-      <button class="btn btn-ghost btn-sm" onclick="closeBonusGame()" type="button">Cerrar ✕</button>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span style="font-size:11px;color:#9ca3af">ESC o ESPACIO para cerrar</span>
+        <button class="btn btn-ghost btn-sm" onclick="closeBonusGame()" type="button" style="font-size:16px;padding:4px 10px">✕</button>
+      </div>
     </div>
     <p id="bonusGameInstructions" class="muted" style="margin:0 0 12px;font-size:13px"></p>
 
@@ -2761,16 +2765,21 @@ async function init() {
     updateSupabaseBadge('none');
   }
   // Inicializar/migrar el sistema de exámenes
-  getExams(); // dispara migración si no existe
-  state.bank = getExam(getActiveExamId()); // bank ahora es el examen activo
-  // restore in-progress session if exists and not finished
-  const sess = loadStore(STORE_KEYS.current, null);
+  getExams();
+  state.bank = getExam(getActiveExamId());
+  // Restaurar sesión en curso — primero IDB, luego backup localStorage
+  let sess = loadStore(STORE_KEYS.current, null);
+  if (!sess || !sess.session) {
+    try {
+      const backup = localStorage.getItem('ag_session_backup');
+      if (backup) sess = JSON.parse(backup);
+    } catch(_) {}
+  }
   if (sess && sess.session && !sess.session.finished && sess.role) {
     state.user = sess.user;
     state.role = sess.role;
     state.session = sess.session;
     state.studentCode = sess.studentCode;
-    // Si la sesión apuntaba a un examen específico, usarlo
     if (sess.session.examId) {
       const exam = getExam(sess.session.examId);
       if (exam) state.bank = exam;
@@ -3157,6 +3166,7 @@ function logout() {
   if (state.autosaveTimer) clearInterval(state.autosaveTimer);
   state.user = null; state.role = null; state.session = null; state.studentCode = null;
   DB.remove(STORE_KEYS.current);
+  try { localStorage.removeItem("ag_session_backup"); } catch(_) {}
   document.getElementById('screenLogin').classList.remove('hidden');
   document.getElementById('screenWarning').classList.add('hidden');
   document.getElementById('screenAdmin').classList.add('hidden');
@@ -4559,7 +4569,134 @@ async function forceLoadAllFromSupabase() {
 }
 
 // ── Sincronización completa desde Supabase ────────────────────
-async function syncAllFromSupabase() {
+// ── Auto-refresh del panel admin ──────────────────────────────
+let _autoRefreshTimer = null;
+let _autoRefreshInterval = 30; // segundos
+let _autoRefreshCountdown = 0;
+let _autoRefreshCountdownTimer = null;
+
+function toggleAutoRefresh() {
+  const btn = document.getElementById('autoRefreshBtn');
+  if (_autoRefreshTimer) {
+    // Desactivar
+    clearInterval(_autoRefreshTimer);
+    clearInterval(_autoRefreshCountdownTimer);
+    _autoRefreshTimer = null;
+    if (btn) { btn.textContent = '⏱ Auto'; btn.style.background = 'rgba(255,255,255,.08)'; btn.style.color = 'rgba(255,255,255,.7)'; btn.title = 'Activar actualización automática cada 30 segundos'; }
+    showToast('⏸ Auto-actualización desactivada', 'warning', 2000);
+  } else {
+    // Activar
+    _startAutoRefresh();
+    showToast('▶ Auto-actualización cada ' + _autoRefreshInterval + 's activada', 'success', 2000);
+  }
+}
+
+function _startAutoRefresh() {
+  const btn = document.getElementById('autoRefreshBtn');
+  _autoRefreshCountdown = _autoRefreshInterval;
+  _updateAutoRefreshBtn();
+
+  // Countdown visual en el botón
+  _autoRefreshCountdownTimer = setInterval(() => {
+    _autoRefreshCountdown--;
+    _updateAutoRefreshBtn();
+    if (_autoRefreshCountdown <= 0) _autoRefreshCountdown = _autoRefreshInterval;
+  }, 1000);
+
+  // Sync real cada N segundos
+  _autoRefreshTimer = setInterval(() => {
+    _autoRefreshCountdown = _autoRefreshInterval;
+    _silentSync();
+  }, _autoRefreshInterval * 1000);
+}
+
+function _updateAutoRefreshBtn() {
+  const btn = document.getElementById('autoRefreshBtn');
+  if (!btn) return;
+  btn.textContent = '🟢 Auto ' + _autoRefreshCountdown + 's';
+  btn.style.background = 'rgba(34,197,94,.25)';
+  btn.style.color = 'white';
+  btn.title = 'Auto-actualización activa. Clic para desactivar.';
+}
+
+async function _silentSync() {
+  if (!_sb) return;
+  try {
+    // 1. Resultados desde Supabase (silencioso)
+    const { data: rData } = await _sb.from('resultados').select('*').order('creado_en', { ascending: false });
+    if (rData) {
+      const fromCloud = rData.map(r => ({
+        student: r.alumno, studentCode: r.codigo, examId: r.examen_id,
+        examTitle: r.examen_titulo, startedAt: r.inicio, finishedAt: r.fin,
+        reason: r.razon, answers: r.respuestas, alerts: r.alertas || [],
+        games: r.juegos || {}, bonusEarned: r.bonus_ganado || 0,
+        scoreMC: r.puntos_mc || 0, maxMC: r.max_mc || 0,
+        scoreTotal: r.total || 0, feedback: r.retroalimentacion,
+        _integrity: r.integridad, _supabaseId: r.id, _fromCloud: true
+      }));
+      const local = loadStore(STORE_KEYS.results, []);
+      const merged = [...local];
+      let added = 0;
+      for (const cr of fromCloud) {
+        const exists = local.some(lr => lr.studentCode === cr.studentCode && lr.finishedAt === cr.finishedAt);
+        if (!exists) { merged.push(cr); added++; }
+      }
+      if (added > 0) {
+        saveStore(STORE_KEYS.results, merged);
+        showToast('🔔 ' + added + ' resultado(s) nuevo(s)', 'success', 3000);
+      }
+      // Extraer alertas de todos los resultados y actualizar la pestaña
+      const allAlerts = [];
+      fromCloud.forEach(r => {
+        (r.alerts || []).forEach(a => {
+          allAlerts.push({ ...a, student: r.student, studentCode: r.studentCode });
+        });
+      });
+      if (allAlerts.length > 0) {
+        const localAlerts = loadStore(STORE_KEYS.alerts, []);
+        const existing = new Set(localAlerts.map(a => (a.student||'')+'_'+(a.ts||a.time||'')));
+        const newAlerts = allAlerts.filter(a => !existing.has((a.student||'')+'_'+(a.ts||a.time||'')));
+        if (newAlerts.length > 0) {
+          saveStore(STORE_KEYS.alerts, [...localAlerts, ...newAlerts]);
+        }
+      }
+    }
+
+    // 2. Alumnos (silencioso)
+    await syncStudentsFromSupabase();
+
+    // 3. Exámenes (silencioso)
+    await loadExamsFromSupabase();
+
+  } catch(e) { console.warn('_silentSync error:', e.message); }
+
+  // Re-renderizar todas las vistas
+  try { if (typeof renderResults === 'function') renderResults(); } catch(_) {}
+  try { if (typeof renderStudents === 'function') renderStudents(); } catch(_) {}
+  try { if (typeof renderAlerts === 'function') renderAlerts(); } catch(_) {}
+  try { if (typeof renderExamsList === 'function') renderExamsList(); } catch(_) {}
+  try { if (typeof updateAdminTabBadges === 'function') updateAdminTabBadges(); } catch(_) {}
+
+  // Parpadeo en el botón sync para indicar actualización
+  const syncBtn = document.getElementById('syncAllBtn');
+  if (syncBtn && !syncBtn.textContent.includes('Sincronizando')) {
+    const orig = syncBtn.textContent;
+    syncBtn.textContent = '✓ Actualizado';
+    setTimeout(() => { if (syncBtn.textContent === '✓ Actualizado') syncBtn.textContent = orig; }, 1200);
+  }
+}
+
+function stopAutoRefresh() {
+  if (_autoRefreshTimer) { clearInterval(_autoRefreshTimer); _autoRefreshTimer = null; }
+  if (_autoRefreshCountdownTimer) { clearInterval(_autoRefreshCountdownTimer); _autoRefreshCountdownTimer = null; }
+}
+
+// Detener auto-refresh al salir del panel
+const _origLogout = window.logout;
+window.logout = function() {
+  stopAutoRefresh();
+  if (_origLogout) _origLogout.apply(this, arguments);
+};
   if (!_sb) {
     showToast('⚠ Configura Supabase primero — haz clic en el badge Supabase', 'warning', 3000);
     openSupabaseModal();
@@ -5056,13 +5193,14 @@ function resumeStudentSession() {
 }
 
 function saveCurrentSession() {
-  // Actualizar lastSeenAt cada vez que guardamos: así sabemos cuándo el alumno
-  // estaba activo por última vez. Si se va, el reingreso valida este timestamp.
   if (state.session && !state.session.finished) {
     state.session.lastSeenAt = Date.now();
   }
-  saveStore(STORE_KEYS.current, { role: state.role, user: state.user,
-    studentCode: state.studentCode, session: state.session });
+  const data = { role: state.role, user: state.user,
+    studentCode: state.studentCode, session: state.session };
+  saveStore(STORE_KEYS.current, data);
+  // Backup síncrono en localStorage — sobrevive si IDB falla al cerrar la página
+  try { localStorage.setItem('ag_session_backup', JSON.stringify(data)); } catch(_) {}
 }
 
 function renderStudent() {
@@ -5895,6 +6033,7 @@ function submitExam(reason) {
   }
 
   DB.remove(STORE_KEYS.current);
+  try { localStorage.removeItem("ag_session_backup"); } catch(_) {}
 
   // Sincronizar con Supabase en segundo plano (no bloquea la UI)
   syncResultToSupabase(result).then(res => {
@@ -7719,10 +7858,6 @@ function openBonusGame(secKey, gameId) {
   if (!BONUS_GAMES[gameId]) return;
   Object.assign(BONUS, { activeGame: gameId, secKey, score: 0, won: false, finished: false,
                           loop: null, listeners: [] });
-  // NOTA: ya NO pausamos el cronómetro del examen — el tiempo sigue corriendo
-  // mientras el alumno juega. El alumno decide si vale la pena gastar tiempo
-  // del examen para intentar ganar el bonus.
-
   const meta = BONUS_GAMES[gameId];
   document.getElementById('bonusGameTitle').textContent = `${meta.icon} ${meta.name}`;
   document.getElementById('bonusGameInstructions').textContent = meta.tagline;
@@ -7733,11 +7868,24 @@ function openBonusGame(secKey, gameId) {
   document.getElementById('bonusContinueBtn').classList.add('hidden');
   meta.setup();
   document.getElementById('bonusGameModal').classList.remove('hidden');
+  // Agregar listener de teclado para ESC / barra espaciadora
+  BONUS._escHandler = function(e) {
+    if (e.key === 'Escape' || (e.key === ' ' && BONUS.finished)) {
+      e.preventDefault();
+      closeBonusGame();
+    }
+  };
+  document.addEventListener('keydown', BONUS._escHandler);
 }
 
 function closeBonusGame() {
   bonusStop();
   document.getElementById('bonusGameModal').classList.add('hidden');
+  // Remover listener de teclado
+  if (BONUS._escHandler) {
+    document.removeEventListener('keydown', BONUS._escHandler);
+    BONUS._escHandler = null;
+  }
   // Limpiar banner de inactividad si quedó visible
   const banner = document.getElementById('bonusIdleBanner');
   if (banner) banner.remove();
