@@ -6017,6 +6017,14 @@ function cancelPopupTimeout(which) {
   if (state[key]) { clearInterval(state[key]); state[key] = null; }
 }
 
+// Genera un código único de resultado para que el alumno consulte su calificación
+function genResultCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
+}
+
 function submitExam(reason) {
   if (state.session.finished) return;
   state.session.finished = true;
@@ -6076,7 +6084,8 @@ function submitExam(reason) {
     scoreMC,
     maxMC,
     scoreTotal: scoreTotal,
-    pendingReview: pendingReview
+    pendingReview: pendingReview,
+    resultCode: genResultCode()  // generado aquí para que viaje con Supabase desde el inicio
   };
 
   // Calcular hash de integridad (SHA-256) para detectar tampering posterior
@@ -10280,7 +10289,8 @@ async function syncResultToSupabase(result) {
       max_mc:           result.maxMC || 0,
       total:            result.scoreTotal || 0,
       retroalimentacion: result.feedback || null,
-      integridad:       result._integrity || null
+      integridad:       result._integrity || null,
+      resultado_codigo: result.resultCode || null
     };
     const { data: insertData, error } = await _sb.from('resultados').insert(row).select('id').single();
     if (error) throw error;
@@ -10815,6 +10825,7 @@ function injectCode(){
   if(document.getElementById("ag-code-sec")) return;
   var all=gR(); if(!all.length) return;
   var r=all[all.length-1];
+  // Usar el código ya generado al entregar; solo generar si falta (compatibilidad con resultados viejos)
   if(!r.resultCode){
     r.resultCode=genCode(); sR(all);
     var sb=gSB();
