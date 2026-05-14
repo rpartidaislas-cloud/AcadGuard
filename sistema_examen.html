@@ -3179,14 +3179,20 @@ function showWarningScreen() {
   const examTitle = state.bank ? state.bank.title : "Examen";
   document.getElementById('warnStudentName').innerHTML = '👤 ' + escapeHTML(state.user) + ' · Código: <b>' + escapeHTML(state.studentCode) + '</b>'
     + '<br><span style="display:inline-block;margin-top:8px;background:#1f4e79;color:white;padding:4px 12px;border-radius:6px;font-weight:700">📘 ' + escapeHTML(examTitle) + '</span>';
-  document.getElementById('warnMinutes').textContent = state.config.minutes;
-  document.getElementById('warnIdle').textContent = state.config.idle;
-  document.getElementById('warnMaxAlerts').textContent = state.config.maxAlerts;
-  document.getElementById('warnMaxAlerts2').textContent = state.config.maxAlerts + 'ª';
-  document.getElementById('warnCountdownInfo').textContent = state.config.warnCountdown != null ? state.config.warnCountdown : 5;
-  document.getElementById('warnPenaltyInfo').textContent = state.config.warnPenalty != null ? state.config.warnPenalty : 1;
-  document.getElementById('warnExitPenalty').textContent = state.config.exitPenalty != null ? state.config.exitPenalty : 5;
-  document.getElementById('warnReentry').textContent = state.config.reentryMinutes != null ? state.config.reentryMinutes : 2;
+
+  // Usar config del examen si existe, para mostrar los valores correctos
+  const examCfg = (state.bank && state.bank.config && Object.keys(state.bank.config).length > 0)
+    ? Object.assign({}, state.config, state.bank.config)
+    : state.config;
+
+  document.getElementById('warnMinutes').textContent = examCfg.minutes;
+  document.getElementById('warnIdle').textContent = examCfg.idle;
+  document.getElementById('warnMaxAlerts').textContent = examCfg.maxAlerts;
+  document.getElementById('warnMaxAlerts2').textContent = examCfg.maxAlerts + 'ª';
+  document.getElementById('warnCountdownInfo').textContent = examCfg.warnCountdown != null ? examCfg.warnCountdown : 5;
+  document.getElementById('warnPenaltyInfo').textContent = examCfg.warnPenalty != null ? examCfg.warnPenalty : 1;
+  document.getElementById('warnExitPenalty').textContent = examCfg.exitPenalty != null ? examCfg.exitPenalty : 5;
+  document.getElementById('warnReentry').textContent = examCfg.reentryMinutes != null ? examCfg.reentryMinutes : 2;
 
   // Mostrar fecha programada del examen (solo fuente del examen, no global)
   const schedEl = document.getElementById('warnSchedule');
