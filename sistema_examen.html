@@ -2533,10 +2533,17 @@ const DB = (() => {
           }
         }
         _ready = true;
+        clearTimeout(_idbTimeout);
         resolve();
       };
-      req.onerror = () => { _loadFromLS(allKeys); resolve(); };
+      req.onerror   = () => { _loadFromLS(allKeys); resolve(); };
       req.onblocked = () => { _loadFromLS(allKeys); resolve(); };
+      // Timeout de seguridad: si IDB no responde en 4s (p.ej. dos pestañas), usar localStorage
+      const _idbTimeout = setTimeout(() => {
+        console.warn('DB.init timeout — usando localStorage como fallback');
+        _loadFromLS(allKeys);
+        resolve();
+      }, 4000);
     });
   }
 
